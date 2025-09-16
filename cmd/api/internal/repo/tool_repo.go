@@ -2,6 +2,7 @@ package repo
 
 import (
 	"database/sql"
+	"fmt"
 	"time"
 
 	"github.com/wassaaa/tool-tracker/cmd/api/internal/domain"
@@ -15,34 +16,114 @@ func NewPostgresToolRepo(db *sql.DB) *PostgresToolRepo {
 	return &PostgresToolRepo{db: db}
 }
 
-func (r *PostgresToolRepo) Create(name string) (domain.Tool, error) {
-	tool := domain.Tool{
-		Name:      name,
-		Status:    "IN_OFFICE",
-		CreatedAt: time.Now(),
-	}
-	query := `INSERT INTO tools (name, status, created_at) VALUES ($1, $2, $3) RETURNING id`
-	err := r.db.QueryRow(query, tool.Name, tool.Status, tool.CreatedAt).Scan(&tool.ID)
+// Helper function to define the column order for tool returns
+func (r *PostgresToolRepo) toolColumns() string {
+	return "id, name, status, created_at, updated_at"
+}
+
+// Helper function to scan a row into a Tool struct
+func (r *PostgresToolRepo) scanTool(scanner interface {
+	Scan(dest ...any) error
+}) (domain.Tool, error) {
+	var tool domain.Tool
+	err := scanner.Scan(
+		&tool.ID,
+		&tool.Name,
+		&tool.Status,
+		&tool.CreatedAt,
+		&tool.UpdatedAt,
+	)
 	return tool, err
 }
 
+func (r *PostgresToolRepo) Create(name string, status domain.ToolStatus) (domain.Tool, error) {
+	tool := domain.Tool{
+		Name:      name,
+		Status:    domain.ToolStatusInOffice,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+
+	query := `INSERT INTO tools (name, status, created_at, updated_at) VALUES ($1, $2, $3, $4) RETURNING id`
+	row := r.db.QueryRow(query, tool.Name, tool.Status, tool.CreatedAt, tool.UpdatedAt)
+	createdTool, err := r.scanTool(row)
+	if err != nil {
+		return domain.Tool{}, fmt.Errorf("failed to create tool: %w", err)
+	}
+
+	return createdTool, nil
+}
+
 func (r *PostgresToolRepo) List(limit, offset int) ([]domain.Tool, error) {
-	query := `SELECT id, name, status, created_at, updated_at FROM tools ORDER BY created_at DESC LIMIT $1 OFFSET $2`
+	query := `SELECT ` + r.toolColumns() + ` FROM tools ORDER BY created_at DESC LIMIT $1 OFFSET $2`
 	rows, err := r.db.Query(query, limit, offset)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to query tools: %w", err)
 	}
 	defer rows.Close()
 
 	var tools []domain.Tool
 	for rows.Next() {
-		var tool domain.Tool
-		err := rows.Scan(&tool.ID, &tool.Name, &tool.Status, &tool.CreatedAt, &tool.UpdatedAt)
+		tool, err := r.scanTool(rows)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to scan tool: %w", err)
 		}
 		tools = append(tools, tool)
 	}
 
-	return tools, rows.Err()
+	// Check for iteration errors
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating over tools: %w", err)
+	}
+
+	return tools, nil
+}
+
+func (r *PostgresToolRepo) Get(id string) (domain.Tool, error) {
+	query := `SELECT ` + r.toolColumns() + ` FROM tools WHERE id = $1`
+
+	row := r.db.QueryRow(query, id)
+	tool, err := r.scanTool(row)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return domain.Tool{}, fmt.Errorf("tool not found")
+		}
+		return domain.Tool{}, fmt.Errorf("failed to get tool: %w", err)
+	}
+
+	return tool, nil
+}
+
+func (r *PostgresToolRepo) Update(id string, name string, status domain.ToolStatus) (domain.Tool, error) {
+	query := `UPDATE tools SET name = $1, status = $2, updated_at = $3 WHERE id = $4 RETURNING ` + r.toolColumns()
+
+	row := r.db.QueryRow(query, name, status, time.Now(), id)
+	tool, err := r.scanTool(row)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return domain.Tool{}, fmt.Errorf("tool not found")
+		}
+		return domain.Tool{}, fmt.Errorf("failed to update tool: %w", err)
+	}
+
+	return tool, nil
+}
+
+func (r *PostgresToolRepo) Delete(id string) error {
+	query := `DELETE FROM tools WHERE id = $1`
+	result, err := r.db.Exec(query, id)
+	if err != nil {
+		return fmt.Errorf("failed to delete tool: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("tool not found")
+	}
+
+	return nil
 }
