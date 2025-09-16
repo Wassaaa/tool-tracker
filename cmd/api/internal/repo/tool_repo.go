@@ -27,7 +27,7 @@ func (r *PostgresToolRepo) Create(name string) (domain.Tool, error) {
 }
 
 func (r *PostgresToolRepo) List(limit, offset int) ([]domain.Tool, error) {
-	query := `SELECT id, name, status, created_at FROM tools ORDER BY created_at DESC LIMIT $1 OFFSET $2`
+	query := `SELECT id, name, status, created_at, updated_at FROM tools ORDER BY created_at DESC LIMIT $1 OFFSET $2`
 	rows, err := r.db.Query(query, limit, offset)
 	if err != nil {
 		return nil, err
@@ -37,7 +37,7 @@ func (r *PostgresToolRepo) List(limit, offset int) ([]domain.Tool, error) {
 	var tools []domain.Tool
 	for rows.Next() {
 		var tool domain.Tool
-		err := rows.Scan(&tool.ID, &tool.Name, &tool.Status, &tool.CreatedAt)
+		err := rows.Scan(&tool.ID, &tool.Name, &tool.Status, &tool.CreatedAt, &tool.UpdatedAt)
 		if err != nil {
 			return nil, err
 		}
