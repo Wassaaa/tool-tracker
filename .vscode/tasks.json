@@ -1,0 +1,36 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Hot Reload",
+            "type": "shell",
+            "command": "air",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "new"
+            },
+            "problemMatcher": "$go",
+            "runOptions": {
+                "runOn": "folderOpen"
+            },
+        },
+        {
+            "label": "Start Database",
+            "type": "shell",
+            "command": "docker-compose up -d",
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            }
+        }
+    ]
+}
