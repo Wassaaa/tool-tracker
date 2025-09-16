@@ -44,7 +44,7 @@ func (r *PostgresToolRepo) Create(name string, status domain.ToolStatus) (domain
 		UpdatedAt: time.Now(),
 	}
 
-	query := `INSERT INTO tools (name, status, created_at, updated_at) VALUES ($1, $2, $3, $4) RETURNING id`
+	query := `INSERT INTO tools (name, status, created_at, updated_at) VALUES ($1, $2, $3, $4) RETURNING id ` + r.toolColumns()
 	row := r.db.QueryRow(query, tool.Name, tool.Status, tool.CreatedAt, tool.UpdatedAt)
 	createdTool, err := r.scanTool(row)
 	if err != nil {
@@ -126,4 +126,38 @@ func (r *PostgresToolRepo) Delete(id string) error {
 	}
 
 	return nil
+}
+
+func (r *PostgresToolRepo) ListByStatus(status domain.ToolStatus, limit, offset int) ([]domain.Tool, error) {
+	query := `SELECT ` + r.toolColumns() + ` FROM tools WHERE status = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`
+	rows, err := r.db.Query(query, status, limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query tools by status: %w", err)
+	}
+	defer rows.Close()
+
+	var tools []domain.Tool
+	for rows.Next() {
+		tool, err := r.scanTool(rows)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan tool: %w", err)
+		}
+		tools = append(tools, tool)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating over tools: %w", err)
+	}
+
+	return tools, nil
+}
+
+func (r *PostgresToolRepo) Count() (int, error) {
+	var count int
+	query := `SELECT COUNT(*) FROM tools`
+	err := r.db.QueryRow(query).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count tools: %w", err)
+	}
+	return count, nil
 }
