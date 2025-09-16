@@ -12,6 +12,8 @@ type ToolRepo interface {
 	Get(id string) (domain.Tool, error)
 	Update(id string, name string, status domain.ToolStatus) (domain.Tool, error)
 	Delete(id string) error
+	ListByStatus(status domain.ToolStatus, limit, offset int) ([]domain.Tool, error)
+	Count() (int, error)
 }
 
 type ToolService struct {
@@ -82,4 +84,18 @@ func (s *ToolService) DeleteTool(id string) error {
 	}
 
 	return s.Repo.Delete(id)
+}
+
+func (s *ToolService) ListToolsByStatus(status domain.ToolStatus, limit, offset int) ([]domain.Tool, error) {
+	// Validate status
+	tool := domain.Tool{Status: status}
+	if err := tool.Validate(); err != nil {
+		return nil, err
+	}
+
+	return s.Repo.ListByStatus(status, limit, offset)
+}
+
+func (s *ToolService) GetToolCount() (int, error) {
+	return s.Repo.Count()
 }
