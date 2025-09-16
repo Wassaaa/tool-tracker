@@ -1,3 +1,19 @@
+// @title Tool Tracker API
+// @version 1.0
+// @description A REST API for tracking company tools and equipment
+// @termsOfService http://swagger.io/terms/
+
+// @contact.name API Support
+// @contact.url http://www.swagger.io/support
+// @contact.email support@swagger.io
+
+// @license.name MIT
+// @license.url https://opensource.org/licenses/MIT
+
+// @host localhost:8080
+// @BasePath /api
+// @schemes http
+
 package main
 
 import (
@@ -10,6 +26,7 @@ import (
 	"github.com/wassaaa/tool-tracker/cmd/api/internal/repo"
 	"github.com/wassaaa/tool-tracker/cmd/api/internal/server"
 	"github.com/wassaaa/tool-tracker/cmd/api/internal/service"
+	_ "github.com/wassaaa/tool-tracker/docs" // This will be generated
 )
 
 func main() {
@@ -34,8 +51,14 @@ func main() {
 	log.Println("Migrations completed")
 
 	toolRepo := repo.NewPostgresToolRepo(db)
+	userRepo := repo.NewPostgresUserRepo(db)
+	eventRepo := repo.NewPostgresEventRepo(db)
+
 	toolService := service.NewToolService(toolRepo)
-	srv := server.NewServer(toolService)
+	userService := service.NewUserService(userRepo)
+	eventService := service.NewEventService(eventRepo)
+
+	srv := server.NewServer(toolService, userService, eventService)
 
 	r := srv.SetupRoutes()
 

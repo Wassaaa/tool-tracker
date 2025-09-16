@@ -1,0 +1,919 @@
+basePath: /api
+definitions:
+  domain.Event:
+    properties:
+      actor_id:
+        description: Who the action was performed on
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      metadata:
+        description: JSON for additional data
+        type: string
+      notes:
+        type: string
+      tool_id:
+        description: Pointer for optional field
+        type: string
+      type:
+        $ref: '#/definitions/domain.EventType'
+      user_id:
+        description: Who performed the action
+        type: string
+    type: object
+  domain.EventType:
+    enum:
+    - TOOL_CREATED
+    - TOOL_UPDATED
+    - TOOL_DELETED
+    - TOOL_CHECKED_OUT
+    - TOOL_CHECKED_IN
+    - TOOL_MAINTENANCE
+    - TOOL_LOST
+    - USER_CREATED
+    - USER_UPDATED
+    - USER_DELETED
+    type: string
+    x-enum-varnames:
+    - EventTypeToolCreated
+    - EventTypeToolUpdated
+    - EventTypeToolDeleted
+    - EventTypeToolCheckedOut
+    - EventTypeToolCheckedIn
+    - EventTypeToolMaintenance
+    - EventTypeToolLost
+    - EventTypeUserCreated
+    - EventTypeUserUpdated
+    - EventTypeUserDeleted
+  domain.Tool:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      status:
+        $ref: '#/definitions/domain.ToolStatus'
+      updated_at:
+        type: string
+    type: object
+  domain.ToolStatus:
+    enum:
+    - IN_OFFICE
+    - CHECKED_OUT
+    - MAINTENANCE
+    - LOST
+    type: string
+    x-enum-varnames:
+    - ToolStatusInOffice
+    - ToolStatusCheckedOut
+    - ToolStatusMaintenance
+    - ToolStatusLost
+  domain.User:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      role:
+        $ref: '#/definitions/domain.UserRole'
+      updated_at:
+        type: string
+    type: object
+  domain.UserRole:
+    enum:
+    - EMPLOYEE
+    - ADMIN
+    - MANAGER
+    type: string
+    x-enum-varnames:
+    - UserRoleEmployee
+    - UserRoleAdmin
+    - UserRoleManager
+  server.CheckinToolRequest:
+    properties:
+      notes:
+        type: string
+      user_id:
+        type: string
+    required:
+    - user_id
+    type: object
+  server.CheckoutToolRequest:
+    properties:
+      notes:
+        type: string
+      user_id:
+        type: string
+    required:
+    - user_id
+    type: object
+  server.CreateToolRequest:
+    properties:
+      name:
+        type: string
+      status:
+        $ref: '#/definitions/domain.ToolStatus'
+    required:
+    - name
+    type: object
+  server.CreateUserRequest:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+      role:
+        $ref: '#/definitions/domain.UserRole'
+    required:
+    - email
+    - name
+    type: object
+  server.MaintenanceRequest:
+    properties:
+      notes:
+        type: string
+      user_id:
+        type: string
+    required:
+    - user_id
+    type: object
+  server.MarkLostRequest:
+    properties:
+      notes:
+        type: string
+      user_id:
+        type: string
+    required:
+    - user_id
+    type: object
+  server.StatsResponse:
+    properties:
+      tools_by_status:
+        properties:
+          checked_out:
+            type: integer
+          in_office:
+            type: integer
+          lost:
+            type: integer
+          maintenance:
+            type: integer
+        type: object
+      total_events:
+        type: integer
+      total_tools:
+        type: integer
+      total_users:
+        type: integer
+      users_by_role:
+        properties:
+          admins:
+            type: integer
+          employees:
+            type: integer
+          managers:
+            type: integer
+        type: object
+    type: object
+  server.UpdateToolRequest:
+    properties:
+      name:
+        type: string
+      status:
+        $ref: '#/definitions/domain.ToolStatus'
+    required:
+    - name
+    type: object
+  server.UpdateUserRequest:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+      role:
+        $ref: '#/definitions/domain.UserRole'
+    required:
+    - email
+    - name
+    - role
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: A REST API for tracking company tools and equipment
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://swagger.io/terms/
+  title: Tool Tracker API
+  version: "1.0"
+paths:
+  /admin/audit:
+    get:
+      consumes:
+      - application/json
+      description: Get recent audit events for administrative review
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get audit log
+      tags:
+      - admin
+  /admin/stats:
+    get:
+      consumes:
+      - application/json
+      description: Get comprehensive statistics about tools, users, and events
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/server.StatsResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get system statistics
+      tags:
+      - admin
+  /events:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of events with pagination and optional filtering
+      parameters:
+      - default: 50
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      - description: Filter by event type
+        in: query
+        name: type
+        type: string
+      - description: Filter by tool ID
+        in: query
+        name: tool_id
+        type: string
+      - description: Filter by user ID
+        in: query
+        name: user_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/domain.Event'
+              type: array
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List all events
+      tags:
+      - events
+  /events/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get a specific event by its ID
+      parameters:
+      - description: Event ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Event'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get an event by ID
+      tags:
+      - events
+  /tools:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of tools with pagination and optional status filtering
+      parameters:
+      - default: 10
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      - description: Filter by status
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/domain.Tool'
+              type: array
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List all tools
+      tags:
+      - tools
+    post:
+      consumes:
+      - application/json
+      description: Create a new tool with name and status
+      parameters:
+      - description: Tool data
+        in: body
+        name: tool
+        required: true
+        schema:
+          $ref: '#/definitions/server.CreateToolRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.Tool'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create a new tool
+      tags:
+      - tools
+  /tools/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a tool from the system
+      parameters:
+      - description: Tool ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Delete a tool
+      tags:
+      - tools
+    get:
+      consumes:
+      - application/json
+      description: Get a specific tool by its ID
+      parameters:
+      - description: Tool ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Tool'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get a tool by ID
+      tags:
+      - tools
+    put:
+      consumes:
+      - application/json
+      description: Update a tool's name and status
+      parameters:
+      - description: Tool ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated tool data
+        in: body
+        name: tool
+        required: true
+        schema:
+          $ref: '#/definitions/server.UpdateToolRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Tool'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Update a tool
+      tags:
+      - tools
+  /tools/{id}/checkin:
+    post:
+      consumes:
+      - application/json
+      description: Check in a tool that was previously checked out
+      parameters:
+      - description: Tool ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Checkin data
+        in: body
+        name: checkin
+        required: true
+        schema:
+          $ref: '#/definitions/server.CheckinToolRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Check in a tool from a user
+      tags:
+      - tools
+  /tools/{id}/checkout:
+    post:
+      consumes:
+      - application/json
+      description: Check out a tool to a specific user with optional notes
+      parameters:
+      - description: Tool ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Checkout data
+        in: body
+        name: checkout
+        required: true
+        schema:
+          $ref: '#/definitions/server.CheckoutToolRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Check out a tool to a user
+      tags:
+      - tools
+  /tools/{id}/history:
+    get:
+      consumes:
+      - application/json
+      description: Get the complete event history for a specific tool
+      parameters:
+      - description: Tool ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/domain.Event'
+              type: array
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get tool history
+      tags:
+      - tools
+  /tools/{id}/lost:
+    post:
+      consumes:
+      - application/json
+      description: Mark a tool as lost or missing
+      parameters:
+      - description: Tool ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Lost data
+        in: body
+        name: lost
+        required: true
+        schema:
+          $ref: '#/definitions/server.MarkLostRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Mark a tool as lost
+      tags:
+      - tools
+  /tools/{id}/maintenance:
+    post:
+      consumes:
+      - application/json
+      description: Mark a tool as being in maintenance
+      parameters:
+      - description: Tool ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Maintenance data
+        in: body
+        name: maintenance
+        required: true
+        schema:
+          $ref: '#/definitions/server.MaintenanceRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Send a tool to maintenance
+      tags:
+      - tools
+  /users:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of users with pagination and optional role filtering
+      parameters:
+      - default: 10
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      - description: Filter by role (EMPLOYEE, ADMIN, MANAGER)
+        in: query
+        name: role
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/domain.User'
+              type: array
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List all users
+      tags:
+      - users
+    post:
+      consumes:
+      - application/json
+      description: Create a new user with name, email, and role
+      parameters:
+      - description: User data
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/server.CreateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.User'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create a new user
+      tags:
+      - users
+  /users/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a user from the system
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Delete a user
+      tags:
+      - users
+    get:
+      consumes:
+      - application/json
+      description: Get a specific user by their ID
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.User'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get a user by ID
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      description: Update a user's name, email, and role
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated user data
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/server.UpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.User'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Update a user
+      tags:
+      - users
+  /users/{id}/activity:
+    get:
+      consumes:
+      - application/json
+      description: Get the complete activity history for a specific user
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/domain.Event'
+              type: array
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get user activity
+      tags:
+      - users
+  /users/{id}/tools:
+    get:
+      consumes:
+      - application/json
+      description: Get list of tools currently checked out by a specific user
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                type: string
+              type: array
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get tools assigned to user
+      tags:
+      - users
+schemes:
+- http
+swagger: "2.0"
