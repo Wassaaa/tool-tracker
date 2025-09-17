@@ -3,8 +3,9 @@ package domain
 import "errors"
 
 var (
-	ErrToolNotFound = errors.New("tool not found")
-	ErrValidation   = errors.New("validation failed")
-	ErrUserNotFound = errors.New("user not found")
+	ErrToolNotFound  = errors.New("tool not found")
+	ErrValidation    = errors.New("validation failed")
+	ErrUserNotFound  = errors.New("user not found")
 	ErrEventNotFound = errors.New("event not found")
+	ErrConflict      = errors.New("conflict")
 )

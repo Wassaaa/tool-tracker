@@ -54,10 +54,9 @@ func (s *UserService) ListUsers(limit, offset int) ([]domain.User, error) {
 }
 
 func (s *UserService) GetUser(id string) (domain.User, error) {
-	if id == "" {
-		return domain.User{}, fmt.Errorf("%w: user ID cannot be empty", domain.ErrValidation)
+	if err := domain.ValidateUUID(id, "user_id"); err != nil {
+		return domain.User{}, err
 	}
-
 	return s.Repo.Get(id)
 }
 
@@ -70,8 +69,8 @@ func (s *UserService) GetUserByEmail(email string) (domain.User, error) {
 }
 
 func (s *UserService) UpdateUser(id string, name string, email string, role domain.UserRole) (domain.User, error) {
-	if id == "" {
-		return domain.User{}, fmt.Errorf("%w: user ID cannot be empty", domain.ErrValidation)
+	if err := domain.ValidateUUID(id, "user_id"); err != nil {
+		return domain.User{}, err
 	}
 	u, err := domain.NewUser(name, email, role)
 	if err != nil {
@@ -87,10 +86,9 @@ func (s *UserService) UpdateUser(id string, name string, email string, role doma
 }
 
 func (s *UserService) DeleteUser(id string) error {
-	if id == "" {
-		return fmt.Errorf("%w: user ID cannot be empty", domain.ErrValidation)
+	if err := domain.ValidateUUID(id, "user_id"); err != nil {
+		return err
 	}
-
 	return s.Repo.Delete(id)
 }
 

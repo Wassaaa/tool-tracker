@@ -1,8 +1,6 @@
 package service
 
 import (
-	"fmt"
-
 	"github.com/wassaaa/tool-tracker/cmd/api/internal/domain"
 )
 
@@ -48,30 +46,27 @@ func (s *ToolService) ListTools(limit, offset int) ([]domain.Tool, error) {
 }
 
 func (s *ToolService) GetTool(id string) (domain.Tool, error) {
-	if id == "" {
-		return domain.Tool{}, fmt.Errorf("tool ID cannot be empty")
+	if err := domain.ValidateUUID(id, "tool_id"); err != nil {
+		return domain.Tool{}, err
 	}
-
 	return s.Repo.Get(id)
 }
 
 func (s *ToolService) UpdateTool(id string, name string, status domain.ToolStatus) (domain.Tool, error) {
-	if id == "" {
-		return domain.Tool{}, fmt.Errorf("tool ID cannot be empty")
+	if err := domain.ValidateUUID(id, "tool_id"); err != nil {
+		return domain.Tool{}, err
 	}
 	t, err := domain.NewTool(name, status)
 	if err != nil {
 		return domain.Tool{}, err
 	}
-
 	return s.Repo.Update(id, t.Name, t.Status)
 }
 
 func (s *ToolService) DeleteTool(id string) error {
-	if id == "" {
-		return fmt.Errorf("tool ID cannot be empty")
+	if err := domain.ValidateUUID(id, "tool_id"); err != nil {
+		return err
 	}
-
 	return s.Repo.Delete(id)
 }
 

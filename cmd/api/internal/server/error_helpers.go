@@ -8,15 +8,32 @@ import (
 	"github.com/wassaaa/tool-tracker/cmd/api/internal/domain"
 )
 
-// respondDomainError maps domain-level sentinel errors to HTTP responses.
-// Falls back to 500 for unknown errors.
+type apiError struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
+}
+
 func respondDomainError(c *gin.Context, err error) {
+	status := http.StatusInternalServerError
+	body := apiError{Code: "internal_error", Message: "internal error"}
+
 	switch {
 	case errors.Is(err, domain.ErrValidation):
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-	case errors.Is(err, domain.ErrToolNotFound), errors.Is(err, domain.ErrUserNotFound), errors.Is(err, domain.ErrEventNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "resource not found"})
-	default:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		status = http.StatusBadRequest
+		body = apiError{Code: "validation_error", Message: err.Error()}
+	case errors.Is(err, domain.ErrConflict):
+		status = http.StatusConflict
+		body = apiError{Code: "conflict", Message: err.Error()}
+	case errors.Is(err, domain.ErrToolNotFound):
+		status = http.StatusNotFound
+		body = apiError{Code: "tool_not_found", Message: err.Error()}
+	case errors.Is(err, domain.ErrUserNotFound):
+		status = http.StatusNotFound
+		body = apiError{Code: "user_not_found", Message: err.Error()}
+	case errors.Is(err, domain.ErrEventNotFound):
+		status = http.StatusNotFound
+		body = apiError{Code: "event_not_found", Message: err.Error()}
 	}
+
+	c.JSON(status, gin.H{"error": body})
 }

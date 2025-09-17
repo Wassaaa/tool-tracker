@@ -1,8 +1,6 @@
 package service
 
 import (
-	"fmt"
-
 	"github.com/wassaaa/tool-tracker/cmd/api/internal/domain"
 	"github.com/wassaaa/tool-tracker/cmd/api/internal/repo"
 )
@@ -36,10 +34,10 @@ func (s *EventService) CreateEvent(eventType domain.EventType, toolID *string, u
 
 func (s *EventService) ListEvents(limit, offset int, eventType *string, toolID *string, userID *string) ([]domain.Event, error) {
 	if limit <= 0 {
-		limit = 50 // Higher default for events
+		limit = 50
 	}
 	if limit > 500 {
-		limit = 500 // Higher max for events
+		limit = 500
 	}
 	if offset < 0 {
 		offset = 0
@@ -65,15 +63,15 @@ func (s *EventService) ListEvents(limit, offset int, eventType *string, toolID *
 }
 
 func (s *EventService) GetEvent(id string) (domain.Event, error) {
-	if id == "" {
-		return domain.Event{}, fmt.Errorf("%w: event ID cannot be empty", domain.ErrValidation)
+	if err := domain.ValidateUUID(id, "event_id"); err != nil {
+		return domain.Event{}, err
 	}
 	return s.Repo.Get(id)
 }
 
 func (s *EventService) GetToolHistory(toolID string) ([]domain.Event, error) {
-	if toolID == "" {
-		return nil, fmt.Errorf("%w: tool ID cannot be empty", domain.ErrValidation)
+	if err := domain.ValidateUUID(toolID, "tool_id"); err != nil {
+		return nil, err
 	}
 
 	// Get all events for this tool (higher limit for history)
@@ -81,8 +79,8 @@ func (s *EventService) GetToolHistory(toolID string) ([]domain.Event, error) {
 }
 
 func (s *EventService) GetUserActivity(userID string) ([]domain.Event, error) {
-	if userID == "" {
-		return nil, fmt.Errorf("%w: user ID cannot be empty", domain.ErrValidation)
+	if err := domain.ValidateUUID(userID, "user_id"); err != nil {
+		return nil, err
 	}
 
 	// Get all events for this user (higher limit for activity)
