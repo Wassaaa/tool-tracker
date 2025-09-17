@@ -58,9 +58,7 @@ func (s *Server) getStats(c *gin.Context) {
 	}
 	stats.TotalEvents = eventCount
 
-	// Note: For tools by status and users by role, you would need to add
-	// specific methods to your services or repositories to count by these criteria
-	// For now, we'll leave them as 0
+	// TODO rest of the stats 0 for now
 
 	c.JSON(http.StatusOK, stats)
 }

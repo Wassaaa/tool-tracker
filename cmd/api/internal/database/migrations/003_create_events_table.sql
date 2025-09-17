@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS events (
     user_id UUID REFERENCES users(id) ON DELETE SET NULL,
     actor_id UUID REFERENCES users(id) ON DELETE SET NULL,
     notes TEXT,
-    metadata JSONB,
+    metadata JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 

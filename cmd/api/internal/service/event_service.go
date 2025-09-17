@@ -6,7 +6,7 @@ import (
 )
 
 type EventRepo interface {
-	Create(eventType domain.EventType, toolID *string, userID *string, actorID *string, notes string, metadata string) (domain.Event, error)
+	Create(eventType domain.EventType, toolID *string, userID *string, actorID *string, notes string, metadata *string) (domain.Event, error)
 	List(limit, offset int) ([]domain.Event, error)
 	Get(id string) (domain.Event, error)
 	ListByType(eventType domain.EventType, limit, offset int) ([]domain.Event, error)
@@ -24,7 +24,7 @@ func NewEventService(r EventRepo) *EventService {
 	return &EventService{Repo: r}
 }
 
-func (s *EventService) CreateEvent(eventType domain.EventType, toolID *string, userID *string, actorID *string, notes string, metadata string) (domain.Event, error) {
+func (s *EventService) CreateEvent(eventType domain.EventType, toolID *string, userID *string, actorID *string, notes string, metadata *string) (domain.Event, error) {
 	evt, err := domain.NewEvent(eventType, toolID, userID, actorID, notes, metadata)
 	if err != nil {
 		return domain.Event{}, err
@@ -111,51 +111,51 @@ func (s *EventService) GetEventCount() (int, error) {
 
 // Helper methods for specific event creation
 func (s *EventService) LogToolCreated(toolID string, userID string) error {
-	_, err := s.CreateEvent(domain.EventTypeToolCreated, &toolID, &userID, nil, "Tool created", "")
+	_, err := s.CreateEvent(domain.EventTypeToolCreated, &toolID, &userID, nil, "Tool created", nil)
 	return err
 }
 
 func (s *EventService) LogToolUpdated(toolID string, userID string, notes string) error {
-	_, err := s.CreateEvent(domain.EventTypeToolUpdated, &toolID, &userID, nil, notes, "")
+	_, err := s.CreateEvent(domain.EventTypeToolUpdated, &toolID, &userID, nil, notes, nil)
 	return err
 }
 
 func (s *EventService) LogToolDeleted(toolID string, userID string) error {
-	_, err := s.CreateEvent(domain.EventTypeToolDeleted, &toolID, &userID, nil, "Tool deleted", "")
+	_, err := s.CreateEvent(domain.EventTypeToolDeleted, &toolID, &userID, nil, "Tool deleted", nil)
 	return err
 }
 
 func (s *EventService) LogToolCheckedOut(toolID string, userID string, actorID string, notes string) error {
-	_, err := s.CreateEvent(domain.EventTypeToolCheckedOut, &toolID, &userID, &actorID, notes, "")
+	_, err := s.CreateEvent(domain.EventTypeToolCheckedOut, &toolID, &userID, &actorID, notes, nil)
 	return err
 }
 
 func (s *EventService) LogToolCheckedIn(toolID string, userID string, actorID string, notes string) error {
-	_, err := s.CreateEvent(domain.EventTypeToolCheckedIn, &toolID, &userID, &actorID, notes, "")
+	_, err := s.CreateEvent(domain.EventTypeToolCheckedIn, &toolID, &userID, &actorID, notes, nil)
 	return err
 }
 
 func (s *EventService) LogToolMaintenance(toolID string, userID string, notes string) error {
-	_, err := s.CreateEvent(domain.EventTypeToolMaintenance, &toolID, &userID, nil, notes, "")
+	_, err := s.CreateEvent(domain.EventTypeToolMaintenance, &toolID, &userID, nil, notes, nil)
 	return err
 }
 
 func (s *EventService) LogToolLost(toolID string, userID string, notes string) error {
-	_, err := s.CreateEvent(domain.EventTypeToolLost, &toolID, &userID, nil, notes, "")
+	_, err := s.CreateEvent(domain.EventTypeToolLost, &toolID, &userID, nil, notes, nil)
 	return err
 }
 
 func (s *EventService) LogUserCreated(userID string, actorID string) error {
-	_, err := s.CreateEvent(domain.EventTypeUserCreated, nil, &actorID, &userID, "User created", "")
+	_, err := s.CreateEvent(domain.EventTypeUserCreated, nil, &actorID, &userID, "User created", nil)
 	return err
 }
 
 func (s *EventService) LogUserUpdated(userID string, actorID string, notes string) error {
-	_, err := s.CreateEvent(domain.EventTypeUserUpdated, nil, &actorID, &userID, notes, "")
+	_, err := s.CreateEvent(domain.EventTypeUserUpdated, nil, &actorID, &userID, notes, nil)
 	return err
 }
 
 func (s *EventService) LogUserDeleted(userID string, actorID string) error {
-	_, err := s.CreateEvent(domain.EventTypeUserDeleted, nil, &actorID, &userID, "User deleted", "")
+	_, err := s.CreateEvent(domain.EventTypeUserDeleted, nil, &actorID, &userID, "User deleted", nil)
 	return err
 }

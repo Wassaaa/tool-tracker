@@ -27,12 +27,12 @@ type Event struct {
 	UserID    *string   `json:"user_id,omitempty"`
 	ActorID   *string   `json:"actor_id,omitempty"`
 	Notes     string    `json:"notes"`
-	Metadata  string    `json:"metadata,omitempty"`
+	Metadata  *string   `json:"metadata,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
 // NewEvent constructs an Event and validates it.
-func NewEvent(eventType EventType, toolID, userID, actorID *string, notes, metadata string) (Event, error) {
+func NewEvent(eventType EventType, toolID *string, userID *string, actorID *string, notes string, metadata *string) (Event, error) {
 	e := Event{Type: eventType, ToolID: toolID, UserID: userID, ActorID: actorID, Notes: notes, Metadata: metadata}
 	return e, e.Validate()
 }

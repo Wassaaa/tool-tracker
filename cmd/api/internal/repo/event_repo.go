@@ -39,7 +39,7 @@ func (r *PostgresEventRepo) scanEvent(scanner interface {
 	return event, err
 }
 
-func (r *PostgresEventRepo) Create(eventType domain.EventType, toolID *string, userID *string, actorID *string, notes string, metadata string) (domain.Event, error) {
+func (r *PostgresEventRepo) Create(eventType domain.EventType, toolID, userID, actorID *string, notes string, metadata *string) (domain.Event, error) {
 	event := domain.Event{
 		Type:      eventType,
 		ToolID:    toolID,
