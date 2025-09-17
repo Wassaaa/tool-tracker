@@ -14,7 +14,7 @@ func respondDomainError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, domain.ErrValidation):
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-	case errors.Is(err, domain.ErrToolNotFound), errors.Is(err, domain.ErrUserNotFound):
+	case errors.Is(err, domain.ErrToolNotFound), errors.Is(err, domain.ErrUserNotFound), errors.Is(err, domain.ErrEventNotFound):
 		c.JSON(http.StatusNotFound, gin.H{"error": "resource not found"})
 	default:
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})

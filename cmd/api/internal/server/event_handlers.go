@@ -46,27 +46,27 @@ func (s *Server) checkoutTool(c *gin.Context) {
 
 	var req CheckoutToolRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		respondDomainError(c, err)
 		return
 	}
 
 	// Get the tool first to check if it exists and is available
 	tool, err := s.toolService.GetTool(toolID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Tool not found"})
+		respondDomainError(c, err)
 		return
 	}
 
 	// Check if tool is available for checkout
 	if tool.Status != domain.ToolStatusInOffice {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Tool is not available for checkout"})
+		respondDomainError(c, domain.ErrValidation)
 		return
 	}
 
 	// Update tool status to checked out
 	updatedTool, err := s.toolService.UpdateTool(toolID, tool.Name, domain.ToolStatusCheckedOut)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to checkout tool"})
+		respondDomainError(c, err)
 		return
 	}
 
@@ -99,27 +99,27 @@ func (s *Server) checkinTool(c *gin.Context) {
 
 	var req CheckinToolRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		respondDomainError(c, err)
 		return
 	}
 
 	// Get the tool first to check if it exists and is checked out
 	tool, err := s.toolService.GetTool(toolID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Tool not found"})
+		respondDomainError(c, err)
 		return
 	}
 
 	// Check if tool is checked out
 	if tool.Status != domain.ToolStatusCheckedOut {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Tool is not checked out"})
+		respondDomainError(c, domain.ErrValidation)
 		return
 	}
 
 	// Update tool status to in office
 	updatedTool, err := s.toolService.UpdateTool(toolID, tool.Name, domain.ToolStatusInOffice)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to checkin tool"})
+		respondDomainError(c, err)
 		return
 	}
 
@@ -152,21 +152,21 @@ func (s *Server) sendToMaintenance(c *gin.Context) {
 
 	var req MaintenanceRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		respondDomainError(c, err)
 		return
 	}
 
 	// Get the tool first
 	tool, err := s.toolService.GetTool(toolID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Tool not found"})
+		respondDomainError(c, err)
 		return
 	}
 
 	// Update tool status to maintenance
 	updatedTool, err := s.toolService.UpdateTool(toolID, tool.Name, domain.ToolStatusMaintenance)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send tool to maintenance"})
+		respondDomainError(c, err)
 		return
 	}
 
@@ -199,21 +199,21 @@ func (s *Server) markAsLost(c *gin.Context) {
 
 	var req MarkLostRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		respondDomainError(c, err)
 		return
 	}
 
 	// Get the tool first
 	tool, err := s.toolService.GetTool(toolID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Tool not found"})
+		respondDomainError(c, err)
 		return
 	}
 
 	// Update tool status to lost
 	updatedTool, err := s.toolService.UpdateTool(toolID, tool.Name, domain.ToolStatusLost)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to mark tool as lost"})
+		respondDomainError(c, err)
 		return
 	}
 
@@ -264,9 +264,7 @@ func (s *Server) listEvents(c *gin.Context) {
 
 	// Validate event type if provided
 	if eventType != "" && !domain.EventType(eventType).IsValid() {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid event type",
-		})
+		respondDomainError(c, domain.ErrValidation)
 		return
 	}
 
@@ -286,7 +284,7 @@ func (s *Server) listEvents(c *gin.Context) {
 
 	events, err := s.eventService.ListEvents(limit, offset, eventTypePtr, toolIDPtr, userIDPtr)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondDomainError(c, err)
 		return
 	}
 
@@ -308,7 +306,7 @@ func (s *Server) getEvent(c *gin.Context) {
 
 	event, err := s.eventService.GetEvent(id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		respondDomainError(c, err)
 		return
 	}
 
@@ -330,7 +328,7 @@ func (s *Server) getToolHistory(c *gin.Context) {
 
 	events, err := s.eventService.GetToolHistory(toolID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondDomainError(c, err)
 		return
 	}
 
@@ -352,7 +350,7 @@ func (s *Server) getUserActivity(c *gin.Context) {
 
 	events, err := s.eventService.GetUserActivity(userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondDomainError(c, err)
 		return
 	}
 
@@ -376,7 +374,7 @@ func (s *Server) getUserTools(c *gin.Context) {
 	// For now, we'll use events to find checked out tools by this user
 	events, err := s.eventService.GetUserActivity(userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondDomainError(c, err)
 		return
 	}
 

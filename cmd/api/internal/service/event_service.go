@@ -27,25 +27,11 @@ func NewEventService(r EventRepo) *EventService {
 }
 
 func (s *EventService) CreateEvent(eventType domain.EventType, toolID *string, userID *string, actorID *string, notes string, metadata string) (domain.Event, error) {
-	// Validate event type
-	if !eventType.IsValid() {
-		return domain.Event{}, fmt.Errorf("invalid event type: %s", eventType)
-	}
-
-	// Validate using domain validation
-	event := domain.Event{
-		Type:     eventType,
-		ToolID:   toolID,
-		UserID:   userID,
-		ActorID:  actorID,
-		Notes:    notes,
-		Metadata: metadata,
-	}
-	if err := event.Validate(); err != nil {
+	evt, err := domain.NewEvent(eventType, toolID, userID, actorID, notes, metadata)
+	if err != nil {
 		return domain.Event{}, err
 	}
-
-	return s.Repo.Create(eventType, toolID, userID, actorID, notes, metadata)
+	return s.Repo.Create(evt.Type, evt.ToolID, evt.UserID, evt.ActorID, evt.Notes, evt.Metadata)
 }
 
 func (s *EventService) ListEvents(limit, offset int, eventType *string, toolID *string, userID *string) ([]domain.Event, error) {
@@ -63,8 +49,8 @@ func (s *EventService) ListEvents(limit, offset int, eventType *string, toolID *
 	filter := repo.EventFilter{}
 	if eventType != nil && *eventType != "" {
 		et := domain.EventType(*eventType)
-		if !et.IsValid() {
-			return nil, fmt.Errorf("invalid event type: %s", *eventType)
+		if err := domain.ValidateEventType(et); err != nil {
+			return nil, err
 		}
 		filter.Type = &et
 	}
@@ -80,15 +66,14 @@ func (s *EventService) ListEvents(limit, offset int, eventType *string, toolID *
 
 func (s *EventService) GetEvent(id string) (domain.Event, error) {
 	if id == "" {
-		return domain.Event{}, fmt.Errorf("event ID cannot be empty")
+		return domain.Event{}, fmt.Errorf("%w: event ID cannot be empty", domain.ErrValidation)
 	}
-
 	return s.Repo.Get(id)
 }
 
 func (s *EventService) GetToolHistory(toolID string) ([]domain.Event, error) {
 	if toolID == "" {
-		return nil, fmt.Errorf("tool ID cannot be empty")
+		return nil, fmt.Errorf("%w: tool ID cannot be empty", domain.ErrValidation)
 	}
 
 	// Get all events for this tool (higher limit for history)
@@ -97,7 +82,7 @@ func (s *EventService) GetToolHistory(toolID string) ([]domain.Event, error) {
 
 func (s *EventService) GetUserActivity(userID string) ([]domain.Event, error) {
 	if userID == "" {
-		return nil, fmt.Errorf("user ID cannot be empty")
+		return nil, fmt.Errorf("%w: user ID cannot be empty", domain.ErrValidation)
 	}
 
 	// Get all events for this user (higher limit for activity)
@@ -105,8 +90,8 @@ func (s *EventService) GetUserActivity(userID string) ([]domain.Event, error) {
 }
 
 func (s *EventService) GetEventsByType(eventType domain.EventType, limit, offset int) ([]domain.Event, error) {
-	if !eventType.IsValid() {
-		return nil, fmt.Errorf("invalid event type: %s", eventType)
+	if err := domain.ValidateEventType(eventType); err != nil {
+		return nil, err
 	}
 
 	if limit <= 0 {

@@ -91,7 +91,7 @@ func (r *PostgresEventRepo) Get(id string) (domain.Event, error) {
 	event, err := r.scanEvent(row)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return domain.Event{}, fmt.Errorf("event not found")
+			return domain.Event{}, domain.ErrEventNotFound
 		}
 		return domain.Event{}, fmt.Errorf("failed to get event: %w", err)
 	}
