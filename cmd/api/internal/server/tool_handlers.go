@@ -35,10 +35,6 @@ func (s *Server) createTool(c *gin.Context) {
 		return
 	}
 
-	if req.Status == "" {
-		req.Status = domain.ToolStatusInOffice
-	}
-
 	tool, err := s.toolService.CreateTool(req.Name, req.Status)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

@@ -25,18 +25,12 @@ func NewToolService(r ToolRepo) *ToolService {
 }
 
 func (s *ToolService) CreateTool(name string, status domain.ToolStatus) (domain.Tool, error) {
-	// Validate input
-	if name == "" {
-		return domain.Tool{}, fmt.Errorf("tool name cannot be empty")
-	}
-
-	// Validate status
-	tool := domain.Tool{Name: name, Status: status}
-	if err := tool.Validate(); err != nil {
+	t, err := domain.NewTool(name, status)
+	if err != nil {
 		return domain.Tool{}, err
 	}
 
-	return s.Repo.Create(name, status)
+	return s.Repo.Create(t.Name, t.Status)
 }
 
 func (s *ToolService) ListTools(limit, offset int) ([]domain.Tool, error) {
@@ -65,17 +59,12 @@ func (s *ToolService) UpdateTool(id string, name string, status domain.ToolStatu
 	if id == "" {
 		return domain.Tool{}, fmt.Errorf("tool ID cannot be empty")
 	}
-	if name == "" {
-		return domain.Tool{}, fmt.Errorf("tool name cannot be empty")
-	}
-
-	// Validate status
-	tool := domain.Tool{Name: name, Status: status}
-	if err := tool.Validate(); err != nil {
+	t, err := domain.NewTool(name, status)
+	if err != nil {
 		return domain.Tool{}, err
 	}
 
-	return s.Repo.Update(id, name, status)
+	return s.Repo.Update(id, t.Name, t.Status)
 }
 
 func (s *ToolService) DeleteTool(id string) error {
@@ -88,11 +77,9 @@ func (s *ToolService) DeleteTool(id string) error {
 
 func (s *ToolService) ListToolsByStatus(status domain.ToolStatus, limit, offset int) ([]domain.Tool, error) {
 	// Validate status
-	tool := domain.Tool{Status: status}
-	if err := tool.Validate(); err != nil {
+	if err := domain.ValidateToolStatus(status); err != nil {
 		return nil, err
 	}
-
 	return s.Repo.ListByStatus(status, limit, offset)
 }
 
