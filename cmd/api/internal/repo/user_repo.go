@@ -87,7 +87,7 @@ func (r *PostgresUserRepo) Get(id string) (domain.User, error) {
 	user, err := r.scanUser(row)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return domain.User{}, fmt.Errorf("user not found")
+			return domain.User{}, domain.ErrUserNotFound
 		}
 		return domain.User{}, fmt.Errorf("failed to get user: %w", err)
 	}
@@ -102,7 +102,7 @@ func (r *PostgresUserRepo) GetByEmail(email string) (domain.User, error) {
 	user, err := r.scanUser(row)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return domain.User{}, fmt.Errorf("user not found")
+			return domain.User{}, domain.ErrUserNotFound
 		}
 		return domain.User{}, fmt.Errorf("failed to get user by email: %w", err)
 	}
@@ -117,7 +117,7 @@ func (r *PostgresUserRepo) Update(id string, name string, email string, role dom
 	user, err := r.scanUser(row)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return domain.User{}, fmt.Errorf("user not found")
+			return domain.User{}, domain.ErrUserNotFound
 		}
 		return domain.User{}, fmt.Errorf("failed to update user: %w", err)
 	}
@@ -138,7 +138,7 @@ func (r *PostgresUserRepo) Delete(id string) error {
 	}
 
 	if rowsAffected == 0 {
-		return fmt.Errorf("user not found")
+		return domain.ErrUserNotFound
 	}
 
 	return nil

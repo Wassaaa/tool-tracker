@@ -26,32 +26,17 @@ func NewUserService(r UserRepo) *UserService {
 }
 
 func (s *UserService) CreateUser(name string, email string, role domain.UserRole) (domain.User, error) {
-	// Validate input
-	if name == "" {
-		return domain.User{}, fmt.Errorf("user name cannot be empty")
-	}
-	if email == "" {
-		return domain.User{}, fmt.Errorf("user email cannot be empty")
-	}
-
-	// Set default role if empty
-	if role == "" {
-		role = domain.UserRoleEmployee
-	}
-
-	// Validate using domain validation
-	user := domain.User{Name: name, Email: email, Role: role}
-	if err := user.Validate(); err != nil {
+	u, err := domain.NewUser(name, email, role)
+	if err != nil {
 		return domain.User{}, err
 	}
 
 	// Check if user with email already exists
-	_, err := s.Repo.GetByEmail(email)
-	if err == nil {
-		return domain.User{}, fmt.Errorf("user with email '%s' already exists", email)
+	if existing, err := s.Repo.GetByEmail(u.Email); err == nil && existing.ID != "" {
+		return domain.User{}, fmt.Errorf("%w: user with email '%s' already exists", domain.ErrValidation, u.Email)
 	}
 
-	return s.Repo.Create(name, email, role)
+	return s.Repo.Create(u.Name, u.Email, u.Role)
 }
 
 func (s *UserService) ListUsers(limit, offset int) ([]domain.User, error) {
@@ -70,7 +55,7 @@ func (s *UserService) ListUsers(limit, offset int) ([]domain.User, error) {
 
 func (s *UserService) GetUser(id string) (domain.User, error) {
 	if id == "" {
-		return domain.User{}, fmt.Errorf("user ID cannot be empty")
+		return domain.User{}, fmt.Errorf("%w: user ID cannot be empty", domain.ErrValidation)
 	}
 
 	return s.Repo.Get(id)
@@ -86,33 +71,24 @@ func (s *UserService) GetUserByEmail(email string) (domain.User, error) {
 
 func (s *UserService) UpdateUser(id string, name string, email string, role domain.UserRole) (domain.User, error) {
 	if id == "" {
-		return domain.User{}, fmt.Errorf("user ID cannot be empty")
+		return domain.User{}, fmt.Errorf("%w: user ID cannot be empty", domain.ErrValidation)
 	}
-	if name == "" {
-		return domain.User{}, fmt.Errorf("user name cannot be empty")
-	}
-	if email == "" {
-		return domain.User{}, fmt.Errorf("user email cannot be empty")
-	}
-
-	// Validate using domain validation
-	user := domain.User{Name: name, Email: email, Role: role}
-	if err := user.Validate(); err != nil {
+	u, err := domain.NewUser(name, email, role)
+	if err != nil {
 		return domain.User{}, err
 	}
 
-	// Check if trying to update to an email that already exists (for different user)
-	existingUser, err := s.Repo.GetByEmail(email)
-	if err == nil && existingUser.ID != id {
-		return domain.User{}, fmt.Errorf("user with email '%s' already exists", email)
+	// Ensure email uniqueness (if another user has this email)
+	if existing, err := s.Repo.GetByEmail(u.Email); err == nil && existing.ID != id {
+		return domain.User{}, fmt.Errorf("%w: user with email '%s' already exists", domain.ErrValidation, u.Email)
 	}
 
-	return s.Repo.Update(id, name, email, role)
+	return s.Repo.Update(id, u.Name, u.Email, u.Role)
 }
 
 func (s *UserService) DeleteUser(id string) error {
 	if id == "" {
-		return fmt.Errorf("user ID cannot be empty")
+		return fmt.Errorf("%w: user ID cannot be empty", domain.ErrValidation)
 	}
 
 	return s.Repo.Delete(id)
@@ -120,8 +96,8 @@ func (s *UserService) DeleteUser(id string) error {
 
 func (s *UserService) ListUsersByRole(role domain.UserRole, limit, offset int) ([]domain.User, error) {
 	// Validate role
-	if !role.IsValid() {
-		return nil, fmt.Errorf("invalid role: %s", role)
+	if err := domain.ValidateUserRole(role); err != nil {
+		return nil, err
 	}
 
 	if limit <= 0 {

@@ -33,26 +33,13 @@ type UpdateUserRequest struct {
 func (s *Server) createUser(c *gin.Context) {
 	var req CreateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	// Set default role if not provided
-	if req.Role == "" {
-		req.Role = domain.UserRoleEmployee
-	}
-
-	// Validate role
-	if !req.Role.IsValid() {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid role. Valid values: EMPLOYEE, ADMIN, MANAGER",
-		})
+		respondDomainError(c, err)
 		return
 	}
 
 	user, err := s.userService.CreateUser(req.Name, req.Email, req.Role)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		respondDomainError(c, err)
 		return
 	}
 
@@ -90,9 +77,7 @@ func (s *Server) listUsers(c *gin.Context) {
 
 	// Validate role filter if provided
 	if roleFilter != "" && !domain.UserRole(roleFilter).IsValid() {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid role filter. Valid values: EMPLOYEE, ADMIN, MANAGER",
-		})
+		respondDomainError(c, domain.ErrValidation)
 		return
 	}
 
@@ -104,7 +89,7 @@ func (s *Server) listUsers(c *gin.Context) {
 	}
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondDomainError(c, err)
 		return
 	}
 
@@ -126,7 +111,7 @@ func (s *Server) getUser(c *gin.Context) {
 
 	user, err := s.userService.GetUser(id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		respondDomainError(c, err)
 		return
 	}
 
@@ -150,21 +135,13 @@ func (s *Server) updateUser(c *gin.Context) {
 
 	var req UpdateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	// Validate role
-	if !req.Role.IsValid() {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid role. Valid values: EMPLOYEE, ADMIN, MANAGER",
-		})
+		respondDomainError(c, err)
 		return
 	}
 
 	user, err := s.userService.UpdateUser(id, req.Name, req.Email, req.Role)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		respondDomainError(c, err)
 		return
 	}
 
@@ -187,7 +164,7 @@ func (s *Server) deleteUser(c *gin.Context) {
 
 	err := s.userService.DeleteUser(id)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		respondDomainError(c, err)
 		return
 	}
 
@@ -195,11 +172,4 @@ func (s *Server) deleteUser(c *gin.Context) {
 }
 
 // Helper function to validate user role
-func isValidUserRole(role domain.UserRole) bool {
-	switch role {
-	case domain.UserRoleEmployee, domain.UserRoleAdmin, domain.UserRoleManager:
-		return true
-	default:
-		return false
-	}
-}
+// role validation now handled by domain validation & service layer
