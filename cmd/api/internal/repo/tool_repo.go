@@ -44,7 +44,7 @@ func (r *PostgresToolRepo) Create(name string, status domain.ToolStatus) (domain
 		UpdatedAt: time.Now(),
 	}
 
-	query := `INSERT INTO tools (name, status, created_at, updated_at) VALUES ($1, $2, $3, $4) RETURNING id ` + r.toolColumns()
+	query := `INSERT INTO tools (name, status, created_at, updated_at) VALUES ($1, $2, $3, $4) RETURNING ` + r.toolColumns()
 	row := r.db.QueryRow(query, tool.Name, tool.Status, tool.CreatedAt, tool.UpdatedAt)
 	createdTool, err := r.scanTool(row)
 	if err != nil {

@@ -191,7 +191,7 @@ func (s *Server) deleteUser(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusNoContent, nil)
+	c.Status(http.StatusNoContent)
 }
 
 // Helper function to validate user role
