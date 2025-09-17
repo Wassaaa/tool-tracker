@@ -39,7 +39,7 @@ func (r *PostgresToolRepo) scanTool(scanner interface {
 func (r *PostgresToolRepo) Create(name string, status domain.ToolStatus) (domain.Tool, error) {
 	tool := domain.Tool{
 		Name:      name,
-		Status:    domain.ToolStatusInOffice,
+		Status:    status,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
