@@ -14,6 +14,15 @@ const (
 	ToolStatusLost        ToolStatus = "LOST"
 )
 
+func (s ToolStatus) IsValid() bool {
+	switch s {
+	case ToolStatusInOffice, ToolStatusCheckedOut, ToolStatusLost, ToolStatusMaintenance:
+		return true
+	default:
+		return false
+	}
+}
+
 type Tool struct {
 	ID        string     `json:"id"`
 	Name      string     `json:"name"`
@@ -23,27 +32,28 @@ type Tool struct {
 }
 
 func NewTool(name string, status ToolStatus) (Tool, error) {
-    if status == "" {
-        status = ToolStatusInOffice
-    }
-    t := Tool{Name: name, Status: status}
-    return t, t.Validate()
+	if status == "" {
+		status = ToolStatusInOffice
+	}
+	t := Tool{Name: name, Status: status}
+
+	return t, t.Validate()
 }
 
 func ValidateToolStatus(status ToolStatus) error {
-	switch status {
-	case ToolStatusInOffice, ToolStatusCheckedOut, ToolStatusLost, ToolStatusMaintenance:
-		return nil
-	default:
-		return fmt.Errorf("invalid status %s", status)
+	if !status.IsValid() {
+		return fmt.Errorf("%w: invalid status %s", ErrValidation, status)
 	}
+
+	return nil
 }
 func (t *Tool) Validate() error {
 	if t.Name == "" {
-		return fmt.Errorf("name is required")
+		return fmt.Errorf("%w: name is required", ErrValidation)
 	}
 	if err := ValidateToolStatus(t.Status); err != nil {
 		return err
 	}
+
 	return nil
 }

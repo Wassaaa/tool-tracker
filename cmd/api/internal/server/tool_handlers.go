@@ -37,7 +37,7 @@ func (s *Server) createTool(c *gin.Context) {
 
 	tool, err := s.toolService.CreateTool(req.Name, req.Status)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		respondDomainError(c, err)
 		return
 	}
 
@@ -96,7 +96,7 @@ func (s *Server) getTool(c *gin.Context) {
 
 	tool, err := s.toolService.GetTool(id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Tool not found"})
+		respondDomainError(c, err)
 		return
 	}
 
@@ -126,7 +126,7 @@ func (s *Server) updateTool(c *gin.Context) {
 
 	tool, err := s.toolService.UpdateTool(id, req.Name, req.Status)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update tool"})
+		respondDomainError(c, err)
 		return
 	}
 
@@ -149,9 +149,11 @@ func (s *Server) deleteTool(c *gin.Context) {
 
 	err := s.toolService.DeleteTool(id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete tool"})
+		respondDomainError(c, err)
 		return
 	}
 
 	c.Status(http.StatusNoContent)
 }
+
+// tool_handlers now rely on shared respondDomainError in error_helpers.go

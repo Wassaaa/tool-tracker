@@ -86,7 +86,7 @@ func (r *PostgresToolRepo) Get(id string) (domain.Tool, error) {
 	tool, err := r.scanTool(row)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return domain.Tool{}, fmt.Errorf("tool not found")
+			return domain.Tool{}, domain.ErrToolNotFound
 		}
 		return domain.Tool{}, fmt.Errorf("failed to get tool: %w", err)
 	}
@@ -101,7 +101,7 @@ func (r *PostgresToolRepo) Update(id string, name string, status domain.ToolStat
 	tool, err := r.scanTool(row)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return domain.Tool{}, fmt.Errorf("tool not found")
+			return domain.Tool{}, domain.ErrToolNotFound
 		}
 		return domain.Tool{}, fmt.Errorf("failed to update tool: %w", err)
 	}
@@ -122,7 +122,7 @@ func (r *PostgresToolRepo) Delete(id string) error {
 	}
 
 	if rowsAffected == 0 {
-		return fmt.Errorf("tool not found")
+		return domain.ErrToolNotFound
 	}
 
 	return nil
