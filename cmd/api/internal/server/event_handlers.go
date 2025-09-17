@@ -59,7 +59,7 @@ func (s *Server) checkoutTool(c *gin.Context) {
 
 	// Check if tool is available for checkout
 	if tool.Status != domain.ToolStatusInOffice {
-		respondDomainError(c, domain.ErrValidation)
+		respondDomainError(c, validationErr("status", "must be IN_OFFICE to checkout"))
 		return
 	}
 
@@ -112,7 +112,7 @@ func (s *Server) checkinTool(c *gin.Context) {
 
 	// Check if tool is checked out
 	if tool.Status != domain.ToolStatusCheckedOut {
-		respondDomainError(c, domain.ErrValidation)
+		respondDomainError(c, validationErr("status", "must be CHECKED_OUT to checkin"))
 		return
 	}
 
@@ -264,7 +264,7 @@ func (s *Server) listEvents(c *gin.Context) {
 
 	// Validate event type if provided
 	if eventType != "" && !domain.EventType(eventType).IsValid() {
-		respondDomainError(c, domain.ErrValidation)
+		respondDomainError(c, validationErr("type", "is invalid"))
 		return
 	}
 

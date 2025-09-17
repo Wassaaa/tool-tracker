@@ -77,7 +77,7 @@ func (s *Server) listUsers(c *gin.Context) {
 
 	// Validate role filter if provided
 	if roleFilter != "" && !domain.UserRole(roleFilter).IsValid() {
-		respondDomainError(c, domain.ErrValidation)
+		respondDomainError(c, validationErr("role", "is invalid"))
 		return
 	}
 

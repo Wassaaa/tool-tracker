@@ -2,7 +2,9 @@ package server
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/wassaaa/tool-tracker/cmd/api/internal/domain"
@@ -36,4 +38,13 @@ func respondDomainError(c *gin.Context, err error) {
 	}
 
 	c.JSON(status, gin.H{"error": body})
+}
+
+// validationErr wraps domain.ErrValidation with a contextual message (field + detail).
+func validationErr(field, msg string) error {
+	cleanField := strings.TrimSpace(field)
+	if cleanField == "" {
+		return fmt.Errorf("%w: %s", domain.ErrValidation, msg)
+	}
+	return fmt.Errorf("%w: %s %s", domain.ErrValidation, cleanField, msg)
 }

@@ -33,7 +33,7 @@ func (s *UserService) CreateUser(name string, email string, role domain.UserRole
 
 	// Check if user with email already exists
 	if existing, err := s.Repo.GetByEmail(u.Email); err == nil && existing.ID != "" {
-		return domain.User{}, fmt.Errorf("%w: user with email '%s' already exists", domain.ErrValidation, u.Email)
+		return domain.User{}, fmt.Errorf("%w: user with email '%s' already exists", domain.ErrConflict, u.Email)
 	}
 
 	return s.Repo.Create(u.Name, u.Email, u.Role)
@@ -79,7 +79,7 @@ func (s *UserService) UpdateUser(id string, name string, email string, role doma
 
 	// Ensure email uniqueness (if another user has this email)
 	if existing, err := s.Repo.GetByEmail(u.Email); err == nil && existing.ID != id {
-		return domain.User{}, fmt.Errorf("%w: user with email '%s' already exists", domain.ErrValidation, u.Email)
+		return domain.User{}, fmt.Errorf("%w: user with email '%s' already exists", domain.ErrConflict, u.Email)
 	}
 
 	return s.Repo.Update(id, u.Name, u.Email, u.Role)
