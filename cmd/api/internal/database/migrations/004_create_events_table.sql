@@ -1,7 +1,7 @@
 -- Create events table for audit trail
 CREATE TABLE IF NOT EXISTS events (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    type VARCHAR(50) NOT NULL,
+    type event_type NOT NULL,
     tool_id UUID REFERENCES tools(id) ON DELETE SET NULL,
     user_id UUID REFERENCES users(id) ON DELETE SET NULL,
     actor_id UUID REFERENCES users(id) ON DELETE SET NULL,

@@ -1,9 +1,9 @@
 -- Create users table
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name VARCHAR(255) NOT NULL,
-    email VARCHAR(255) NOT NULL UNIQUE,
-    role VARCHAR(50) NOT NULL DEFAULT 'EMPLOYEE',
+    name TEXT NOT NULL,
+    email CITEXT NOT NULL UNIQUE,
+    role user_role NOT NULL DEFAULT 'EMPLOYEE',
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
@@ -17,4 +17,4 @@ CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at DESC);
 CREATE TRIGGER update_users_updated_at 
     BEFORE UPDATE ON users 
     FOR EACH ROW 
-    EXECUTE FUNCTION update_updated_at_column();
+    EXECUTE FUNCTION set_updated_at();
