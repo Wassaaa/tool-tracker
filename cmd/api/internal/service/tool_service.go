@@ -1,6 +1,8 @@
 package service
 
 import (
+	"fmt"
+
 	"github.com/wassaaa/tool-tracker/cmd/api/internal/domain"
 )
 
@@ -8,7 +10,7 @@ type ToolRepo interface {
 	Create(name string, status domain.ToolStatus) (domain.Tool, error)
 	List(limit, offset int) ([]domain.Tool, error)
 	Get(id string) (domain.Tool, error)
-	Update(id string, name string, status domain.ToolStatus) (domain.Tool, error)
+	Update(domain.Tool) (domain.Tool, error)
 	Delete(id string) error
 	ListByStatus(status domain.ToolStatus, limit, offset int) ([]domain.Tool, error)
 	Count() (int, error)
@@ -53,14 +55,67 @@ func (s *ToolService) GetTool(id string) (domain.Tool, error) {
 }
 
 func (s *ToolService) UpdateTool(id string, name string, status domain.ToolStatus) (domain.Tool, error) {
-	if err := domain.ValidateUUID(id, "tool_id"); err != nil {
+	return s.applyAndSave(id, func(t *domain.Tool) error {
+		t.Name = name
+		t.Status = status
+		return nil
+	})
+}
+
+// CheckOutTool: internal controlled mutation (sets CurrentUserId, LastCheckedOutAt, Status)
+func (s *ToolService) CheckOutTool(toolID, userID string) (domain.Tool, error) {
+	if err := domain.ValidateUUID(userID, "user_id"); err != nil {
 		return domain.Tool{}, err
 	}
-	t, err := domain.NewTool(name, status)
-	if err != nil {
-		return domain.Tool{}, err
-	}
-	return s.Repo.Update(id, t.Name, t.Status)
+	return s.applyAndSave(toolID, func(t *domain.Tool) error {
+		if t.CurrentUserId != nil {
+			return fmt.Errorf("%w: tool is already checked out", domain.ErrValidation)
+		}
+		if t.Status == domain.ToolStatusLost {
+			return fmt.Errorf("%w: tool is marked as lost", domain.ErrValidation)
+		}
+		t.Status = domain.ToolStatusCheckedOut
+		t.CurrentUserId = &userID
+		return nil
+	})
+}
+
+// ReturnTool: clears checkout state
+func (s *ToolService) ReturnTool(toolID string) (domain.Tool, error) {
+	return s.applyAndSave(toolID, func(t *domain.Tool) error {
+		if t.CurrentUserId == nil {
+			return fmt.Errorf("%w: tool is already checked in", domain.ErrValidation)
+		}
+		t.CurrentUserId = nil
+		t.Status = domain.ToolStatusInOffice
+		return nil
+	})
+}
+
+// SendToMaintenance moves a tool to maintenance status.
+func (s *ToolService) SendToMaintenance(toolID string) (domain.Tool, error) {
+	return s.applyAndSave(toolID, func(t *domain.Tool) error {
+		if t.Status == domain.ToolStatusLost {
+			return fmt.Errorf("%w: lost tools cannot be sent to maintenance", domain.ErrValidation)
+		}
+		if t.Status == domain.ToolStatusMaintenance {
+			return nil
+		}
+		// Not clearing current_user_id here
+		t.Status = domain.ToolStatusMaintenance
+		return nil
+	})
+}
+
+// MarkLost marks a tool as lost.
+func (s *ToolService) MarkLost(toolID string) (domain.Tool, error) {
+	return s.applyAndSave(toolID, func(t *domain.Tool) error {
+		if t.Status == domain.ToolStatusLost {
+			return nil
+		}
+		t.Status = domain.ToolStatusLost
+		return nil
+	})
 }
 
 func (s *ToolService) DeleteTool(id string) error {
@@ -80,4 +135,27 @@ func (s *ToolService) ListToolsByStatus(status domain.ToolStatus, limit, offset 
 
 func (s *ToolService) GetToolCount() (int, error) {
 	return s.Repo.Count()
+}
+
+// applyAndSave centralizes: id validation, load, mutation, validation, timestamp, persist.
+func (s *ToolService) applyAndSave(id string, mutate func(*domain.Tool) error) (domain.Tool, error) {
+	if err := domain.ValidateUUID(id, "tool_id"); err != nil {
+		return domain.Tool{}, err
+	}
+	current, err := s.Repo.Get(id)
+	if err != nil {
+		return domain.Tool{}, err
+	}
+	if err := mutate(&current); err != nil {
+		return domain.Tool{}, err
+	}
+	if err := current.Validate(); err != nil {
+		return domain.Tool{}, err
+	}
+
+	updated, err := s.Repo.Update(current)
+	if err != nil {
+		return domain.Tool{}, err
+	}
+	return updated, nil
 }

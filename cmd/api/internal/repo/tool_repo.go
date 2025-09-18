@@ -3,7 +3,6 @@ package repo
 import (
 	"database/sql"
 	"fmt"
-	"time"
 
 	"github.com/wassaaa/tool-tracker/cmd/api/internal/domain"
 )
@@ -39,15 +38,14 @@ func (r *PostgresToolRepo) scanTool(scanner interface {
 }
 
 func (r *PostgresToolRepo) Create(name string, status domain.ToolStatus) (domain.Tool, error) {
-	tool := domain.Tool{
-		Name:      name,
-		Status:    status,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+
+	tool, err := domain.NewTool(name, status)
+	if err != nil {
+		return domain.Tool{}, fmt.Errorf("failed to create tool: %w", err)
 	}
 
-	query := `INSERT INTO tools (name, status, created_at, updated_at) VALUES ($1, $2, $3, $4) RETURNING ` + r.toolColumns()
-	row := r.db.QueryRow(query, tool.Name, tool.Status, tool.CreatedAt, tool.UpdatedAt)
+	query := `INSERT INTO tools (name, status) VALUES ($1, $2) RETURNING ` + r.toolColumns()
+	row := r.db.QueryRow(query, tool.Name, tool.Status)
 	createdTool, err := r.scanTool(row)
 	if err != nil {
 		return domain.Tool{}, fmt.Errorf("failed to create tool: %w", err)
@@ -96,10 +94,10 @@ func (r *PostgresToolRepo) Get(id string) (domain.Tool, error) {
 	return tool, nil
 }
 
-func (r *PostgresToolRepo) Update(id string, name string, status domain.ToolStatus) (domain.Tool, error) {
-	query := `UPDATE tools SET name = $1, status = $2, updated_at = $3 WHERE id = $4 RETURNING ` + r.toolColumns()
+func (r *PostgresToolRepo) Update(t domain.Tool) (domain.Tool, error) {
+	query := `UPDATE tools SET name = $1, status = $2 WHERE id = $3 RETURNING ` + r.toolColumns()
 
-	row := r.db.QueryRow(query, name, status, time.Now(), id)
+	row := r.db.QueryRow(query, t.Name, t.Status, t.ID)
 	tool, err := r.scanTool(row)
 	if err != nil {
 		if err == sql.ErrNoRows {
