@@ -152,6 +152,30 @@ func (r *PostgresToolRepo) ListByStatus(status domain.ToolStatus, limit, offset 
 	return tools, nil
 }
 
+func (r *PostgresToolRepo) ListByUser(userID string, limit, offset int) ([]domain.Tool, error) {
+	query := `SELECT ` + r.toolColumns() + ` FROM tools WHERE current_user_id = $1 ORDER BY last_checked_out_at DESC LIMIT $2 OFFSET $3`
+	rows, err := r.db.Query(query, userID, limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query tools by user: %w", err)
+	}
+	defer rows.Close()
+
+	var tools []domain.Tool
+	for rows.Next() {
+		tool, err := r.scanTool(rows)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan tool: %w", err)
+		}
+		tools = append(tools, tool)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating over tools: %w", err)
+	}
+
+	return tools, nil
+}
+
 func (r *PostgresToolRepo) Count() (int, error) {
 	var count int
 	query := `SELECT COUNT(*) FROM tools`

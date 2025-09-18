@@ -13,6 +13,7 @@ type ToolRepo interface {
 	Update(domain.Tool) (domain.Tool, error)
 	Delete(id string) error
 	ListByStatus(status domain.ToolStatus, limit, offset int) ([]domain.Tool, error)
+	ListByUser(userID string, limit, offset int) ([]domain.Tool, error)
 	Count() (int, error)
 }
 
