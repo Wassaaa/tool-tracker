@@ -180,7 +180,7 @@ type EventFilter struct {
 
 func (r *PostgresEventRepo) ListWithFilter(filter EventFilter, limit, offset int) ([]domain.Event, error) {
 	query := `SELECT ` + r.eventColumns() + ` FROM events WHERE 1=1`
-	args := []interface{}{}
+	args := []any{}
 	argIndex := 1
 
 	if filter.Type != nil {
