@@ -18,7 +18,7 @@ func NewPostgresToolRepo(db *sql.DB) *PostgresToolRepo {
 
 // Helper function to define the column order for tool returns
 func (r *PostgresToolRepo) toolColumns() string {
-	return "id, name, status, created_at, updated_at"
+	return "id, name, status, current_user_id, last_checked_out_at, created_at, updated_at"
 }
 
 // Helper function to scan a row into a Tool struct
@@ -30,6 +30,8 @@ func (r *PostgresToolRepo) scanTool(scanner interface {
 		&tool.ID,
 		&tool.Name,
 		&tool.Status,
+		&tool.CurrentUserId,
+		&tool.LastCheckedOutAt,
 		&tool.CreatedAt,
 		&tool.UpdatedAt,
 	)

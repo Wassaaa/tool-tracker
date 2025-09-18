@@ -24,11 +24,13 @@ func (s ToolStatus) IsValid() bool {
 }
 
 type Tool struct {
-	ID        string     `json:"id"`
-	Name      string     `json:"name"`
-	Status    ToolStatus `json:"status"`
-	CreatedAt time.Time  `json:"created_at"`
-	UpdatedAt time.Time  `json:"updated_at"`
+	ID               *string    `json:"id"`
+	Name             string     `json:"name"`
+	Status           ToolStatus `json:"status"`
+	CurrentUserId    *string    `json:"current_user_id,omitempty"`
+	LastCheckedOutAt *time.Time `json:"last_checked_out_at,omitempty"`
+	CreatedAt        time.Time  `json:"created_at"`
+	UpdatedAt        time.Time  `json:"updated_at"`
 }
 
 func NewTool(name string, status ToolStatus) (Tool, error) {
