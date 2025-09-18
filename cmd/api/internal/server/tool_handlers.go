@@ -35,7 +35,8 @@ func (s *Server) createTool(c *gin.Context) {
 		return
 	}
 
-	tool, err := s.toolService.CreateTool(req.Name, req.Status)
+	actor := GetActorID(c)
+	tool, err := s.toolService.CreateTool(req.Name, req.Status, actor, "")
 	if err != nil {
 		respondDomainError(c, err)
 		return
@@ -124,7 +125,8 @@ func (s *Server) updateTool(c *gin.Context) {
 		return
 	}
 
-	tool, err := s.toolService.UpdateTool(id, req.Name, req.Status)
+	actor := GetActorID(c)
+	tool, err := s.toolService.UpdateTool(id, req.Name, req.Status, actor, "")
 	if err != nil {
 		respondDomainError(c, err)
 		return
@@ -147,7 +149,8 @@ func (s *Server) updateTool(c *gin.Context) {
 func (s *Server) deleteTool(c *gin.Context) {
 	id := c.Param("id")
 
-	err := s.toolService.DeleteTool(id)
+	actor := GetActorID(c)
+	err := s.toolService.DeleteTool(id, actor, "")
 	if err != nil {
 		respondDomainError(c, err)
 		return

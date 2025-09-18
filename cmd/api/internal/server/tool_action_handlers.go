@@ -6,8 +6,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Request payloads for tool actions
-// Kept separate from generic update to enforce controlled transitions.
+// Request payloads for tool actions.
+// Logging & state transitions are handled inside the ToolService; handlers just dispatch.
 type CheckoutToolRequest struct {
 	UserID string `json:"user_id" binding:"required"`
 	Notes  string `json:"notes"`
@@ -48,14 +48,12 @@ func (s *Server) checkoutTool(c *gin.Context) {
 		return
 	}
 
-	updatedTool, err := s.toolService.CheckOutTool(toolID, req.UserID)
+	actor := GetActorID(c)
+	updatedTool, err := s.toolService.CheckOutTool(toolID, req.UserID, actor, req.Notes)
 	if err != nil {
 		respondDomainError(c, err)
 		return
 	}
-
-	// Log event
-	_ = s.eventService.LogToolCheckedOut(toolID, req.UserID, req.UserID, req.Notes)
 
 	c.JSON(http.StatusOK, gin.H{"message": "Tool checked out successfully", "tool": updatedTool})
 }
@@ -80,13 +78,13 @@ func (s *Server) checkinTool(c *gin.Context) {
 		return
 	}
 
-	updatedTool, err := s.toolService.ReturnTool(toolID)
+	actor := GetActorID(c)
+	updatedTool, err := s.toolService.ReturnTool(toolID, actor, req.Notes)
 	if err != nil {
 		respondDomainError(c, err)
 		return
 	}
 
-	_ = s.eventService.LogToolCheckedIn(toolID, req.UserID, req.UserID, req.Notes)
 	c.JSON(http.StatusOK, gin.H{"message": "Tool checked in successfully", "tool": updatedTool})
 }
 
@@ -110,13 +108,13 @@ func (s *Server) sendToMaintenance(c *gin.Context) {
 		return
 	}
 
-	updatedTool, err := s.toolService.SendToMaintenance(toolID)
+	actor := GetActorID(c)
+	updatedTool, err := s.toolService.SendToMaintenance(toolID, actor, req.Notes)
 	if err != nil {
 		respondDomainError(c, err)
 		return
 	}
 
-	_ = s.eventService.LogToolMaintenance(toolID, req.UserID, req.Notes)
 	c.JSON(http.StatusOK, gin.H{"message": "Tool sent to maintenance", "tool": updatedTool})
 }
 
@@ -140,12 +138,12 @@ func (s *Server) markAsLost(c *gin.Context) {
 		return
 	}
 
-	updatedTool, err := s.toolService.MarkLost(toolID)
+	actor := GetActorID(c)
+	updatedTool, err := s.toolService.MarkLost(toolID, actor, req.Notes)
 	if err != nil {
 		respondDomainError(c, err)
 		return
 	}
 
-	_ = s.eventService.LogToolLost(toolID, req.UserID, req.Notes)
 	c.JSON(http.StatusOK, gin.H{"message": "Tool marked as lost", "tool": updatedTool})
 }

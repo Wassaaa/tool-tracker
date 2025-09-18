@@ -37,7 +37,8 @@ func (s *Server) createUser(c *gin.Context) {
 		return
 	}
 
-	user, err := s.userService.CreateUser(req.Name, req.Email, req.Role)
+	actor := GetActorID(c)
+	user, err := s.userService.CreateUser(req.Name, req.Email, req.Role, actor, "")
 	if err != nil {
 		respondDomainError(c, err)
 		return
@@ -139,7 +140,8 @@ func (s *Server) updateUser(c *gin.Context) {
 		return
 	}
 
-	user, err := s.userService.UpdateUser(id, req.Name, req.Email, req.Role)
+	actor := GetActorID(c)
+	user, err := s.userService.UpdateUser(id, req.Name, req.Email, req.Role, actor, "")
 	if err != nil {
 		respondDomainError(c, err)
 		return
@@ -162,7 +164,8 @@ func (s *Server) updateUser(c *gin.Context) {
 func (s *Server) deleteUser(c *gin.Context) {
 	id := c.Param("id")
 
-	err := s.userService.DeleteUser(id)
+	actor := GetActorID(c)
+	err := s.userService.DeleteUser(id, actor, "")
 	if err != nil {
 		respondDomainError(c, err)
 		return
