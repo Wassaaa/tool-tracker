@@ -1,6 +1,7 @@
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE EXTENSION IF NOT EXISTS citext;
 
 -- Create a trigger to auto-update updated_at
 CREATE OR REPLACE FUNCTION set_updated_at()
