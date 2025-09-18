@@ -149,21 +149,11 @@ func (s *Server) getUserActivity(c *gin.Context) {
 func (s *Server) getUserTools(c *gin.Context) {
 	userID := c.Param("id")
 
-	// This would require a new method in tool service to get tools by user
-	// For now, we'll use events to find checked out tools by this user
-	events, err := s.eventService.GetUserActivity(userID)
+	checkedOutTools, err := s.toolService.ListToolsByUser(userID, 100, 0)
 	if err != nil {
 		respondDomainError(c, err)
 		return
 	}
 
-	// Filter for checked out tools (this is a simplified approach)
-	var checkedOutTools []string
-	for _, event := range events {
-		if event.Type == domain.EventTypeToolCheckedOut && event.ToolID != nil {
-			checkedOutTools = append(checkedOutTools, *event.ToolID)
-		}
-	}
-
-	c.JSON(http.StatusOK, gin.H{"checked_out_tool_ids": checkedOutTools})
+	c.JSON(http.StatusOK, gin.H{"tools": checkedOutTools})
 }

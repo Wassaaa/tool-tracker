@@ -18,14 +18,21 @@ type UserRepo interface {
 }
 
 type UserService struct {
-	Repo UserRepo
+	Repo   UserRepo
+	events EventLogger
 }
 
 func NewUserService(r UserRepo) *UserService {
 	return &UserService{Repo: r}
 }
 
-func (s *UserService) CreateUser(name string, email string, role domain.UserRole) (domain.User, error) {
+// WithEventLogger sets the event logger dependency (optional chaining style).
+func (s *UserService) WithEventLogger(l EventLogger) *UserService {
+	s.events = l
+	return s
+}
+
+func (s *UserService) CreateUser(name string, email string, role domain.UserRole, actorID, notes string) (domain.User, error) {
 	u, err := domain.NewUser(name, email, role)
 	if err != nil {
 		return domain.User{}, err
@@ -36,7 +43,16 @@ func (s *UserService) CreateUser(name string, email string, role domain.UserRole
 		return domain.User{}, fmt.Errorf("%w: user with email '%s' already exists", domain.ErrConflict, u.Email)
 	}
 
-	return s.Repo.Create(u.Name, u.Email, u.Role)
+	created, err := s.Repo.Create(u.Name, u.Email, u.Role)
+	if err != nil {
+		return domain.User{}, err
+	}
+	if s.events != nil {
+		if created.ID != "" {
+			_ = s.events.LogUserCreated(created.ID, actorID, notes)
+		}
+	}
+	return created, nil
 }
 
 func (s *UserService) ListUsers(limit, offset int) ([]domain.User, error) {
@@ -68,7 +84,7 @@ func (s *UserService) GetUserByEmail(email string) (domain.User, error) {
 	return s.Repo.GetByEmail(email)
 }
 
-func (s *UserService) UpdateUser(id string, name string, email string, role domain.UserRole) (domain.User, error) {
+func (s *UserService) UpdateUser(id string, name string, email string, role domain.UserRole, actorID, notes string) (domain.User, error) {
 	if err := domain.ValidateUUID(id, "user_id"); err != nil {
 		return domain.User{}, err
 	}
@@ -82,14 +98,33 @@ func (s *UserService) UpdateUser(id string, name string, email string, role doma
 		return domain.User{}, fmt.Errorf("%w: user with email '%s' already exists", domain.ErrConflict, u.Email)
 	}
 
-	return s.Repo.Update(id, u.Name, u.Email, u.Role)
+	updated, err := s.Repo.Update(id, u.Name, u.Email, u.Role)
+	if err != nil {
+		return domain.User{}, err
+	}
+	if s.events != nil {
+		if updated.ID != "" {
+			_ = s.events.LogUserUpdated(updated.ID, actorID, notes)
+		}
+	}
+	return updated, nil
 }
 
-func (s *UserService) DeleteUser(id string) error {
+func (s *UserService) DeleteUser(id string, actorID, notes string) error {
 	if err := domain.ValidateUUID(id, "user_id"); err != nil {
 		return err
 	}
-	return s.Repo.Delete(id)
+	u, err := s.Repo.Get(id)
+	if err != nil {
+		return err
+	}
+	if err := s.Repo.Delete(id); err != nil {
+		return err
+	}
+	if s.events != nil && u.ID != "" {
+		_ = s.events.LogUserDeleted(u.ID, actorID, notes)
+	}
+	return nil
 }
 
 func (s *UserService) ListUsersByRole(role domain.UserRole, limit, offset int) ([]domain.User, error) {

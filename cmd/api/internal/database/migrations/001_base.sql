@@ -31,7 +31,16 @@ BEGIN
     END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'event_type') THEN
         CREATE TYPE event_type AS ENUM (
-            'TOOL_CHECKED_OUT','TOOL_CHECKED_IN','TOOL_MARKED_LOST','TOOL_MARKED_MAINTENANCE','TOOL_MARKED_IN_OFFICE'
+            'TOOL_CREATED',
+            'TOOL_UPDATED',
+            'TOOL_DELETED',
+            'TOOL_CHECKED_OUT',
+            'TOOL_CHECKED_IN',
+            'TOOL_MAINTENANCE',
+            'TOOL_LOST',
+            'USER_CREATED',
+            'USER_UPDATED',
+            'USER_DELETED'
         );
     END IF;
 END$$;

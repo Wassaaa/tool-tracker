@@ -54,9 +54,9 @@ func main() {
 	userRepo := repo.NewPostgresUserRepo(db)
 	eventRepo := repo.NewPostgresEventRepo(db)
 
-	toolService := service.NewToolService(toolRepo)
-	userService := service.NewUserService(userRepo)
 	eventService := service.NewEventService(eventRepo)
+	toolService := service.NewToolService(toolRepo).WithEventLogger(eventService)
+	userService := service.NewUserService(userRepo).WithEventLogger(eventService)
 
 	srv := server.NewServer(toolService, userService, eventService)
 

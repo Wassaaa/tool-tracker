@@ -17,20 +17,49 @@ type ToolRepo interface {
 }
 
 type ToolService struct {
-	Repo ToolRepo
+	Repo   ToolRepo
+	events EventLogger
+}
+
+// EventLogger provides event logging for tool lifecycle actions.
+type EventLogger interface {
+	LogToolCheckedOut(toolID string, userID string, actorID string, notes string) error
+	LogToolCheckedIn(toolID string, userID string, actorID string, notes string) error
+	LogToolMaintenance(toolID string, userID string, notes string) error
+	LogToolLost(toolID string, userID string, notes string) error
+	LogToolCreated(toolID string, actorID string, notes string) error
+	LogToolUpdated(toolID string, actorID string, notes string) error
+	LogToolDeleted(toolID string, actorID string, notes string) error
+	LogUserCreated(userID string, actorID string, notes string) error
+	LogUserUpdated(userID string, actorID string, notes string) error
+	LogUserDeleted(userID string, actorID string, notes string) error
 }
 
 func NewToolService(r ToolRepo) *ToolService {
 	return &ToolService{Repo: r}
 }
 
-func (s *ToolService) CreateTool(name string, status domain.ToolStatus) (domain.Tool, error) {
+// WithEventLogger sets the event logger dependency (optional chaining style).
+func (s *ToolService) WithEventLogger(l EventLogger) *ToolService {
+	s.events = l
+	return s
+}
+
+func (s *ToolService) CreateTool(name string, status domain.ToolStatus, actorID, notes string) (domain.Tool, error) {
 	t, err := domain.NewTool(name, status)
 	if err != nil {
 		return domain.Tool{}, err
 	}
-
-	return s.Repo.Create(t.Name, t.Status)
+	created, err := s.Repo.Create(t.Name, t.Status)
+	if err != nil {
+		return domain.Tool{}, err
+	}
+	if s.events != nil {
+		if created.ID != nil {
+			_ = s.events.LogToolCreated(*created.ID, actorID, notes)
+		}
+	}
+	return created, nil
 }
 
 func (s *ToolService) ListTools(limit, offset int) ([]domain.Tool, error) {
@@ -54,20 +83,34 @@ func (s *ToolService) GetTool(id string) (domain.Tool, error) {
 	return s.Repo.Get(id)
 }
 
-func (s *ToolService) UpdateTool(id string, name string, status domain.ToolStatus) (domain.Tool, error) {
-	return s.applyAndSave(id, func(t *domain.Tool) error {
+func (s *ToolService) UpdateTool(id string, name string, status domain.ToolStatus, actorID, notes string) (domain.Tool, error) {
+	tool, err := s.applyAndSave(id, func(t *domain.Tool) error {
 		t.Name = name
 		t.Status = status
 		return nil
 	})
+	if err != nil {
+		return domain.Tool{}, err
+	}
+	if s.events != nil {
+		if tool.ID != nil {
+			_ = s.events.LogToolUpdated(*tool.ID, actorID, notes)
+		}
+	}
+	return tool, nil
 }
 
 // CheckOutTool: internal controlled mutation (sets CurrentUserId, LastCheckedOutAt, Status)
-func (s *ToolService) CheckOutTool(toolID, userID string) (domain.Tool, error) {
+func (s *ToolService) CheckOutTool(toolID, userID, actorID, notes string) (domain.Tool, error) {
 	if err := domain.ValidateUUID(userID, "user_id"); err != nil {
 		return domain.Tool{}, err
 	}
-	return s.applyAndSave(toolID, func(t *domain.Tool) error {
+	if actorID != "" && actorID != userID {
+		if err := domain.ValidateUUID(actorID, "actor_id"); err != nil {
+			return domain.Tool{}, err
+		}
+	}
+	tool, err := s.applyAndSave(toolID, func(t *domain.Tool) error {
 		if t.CurrentUserId != nil {
 			return fmt.Errorf("%w: tool is already checked out", domain.ErrValidation)
 		}
@@ -78,51 +121,109 @@ func (s *ToolService) CheckOutTool(toolID, userID string) (domain.Tool, error) {
 		t.CurrentUserId = &userID
 		return nil
 	})
+	if err != nil {
+		return domain.Tool{}, err
+	}
+	if s.events != nil {
+		_ = s.events.LogToolCheckedOut(toolID, userID, pickActor(actorID, userID), notes)
+	}
+	return tool, nil
 }
 
 // ReturnTool: clears checkout state
-func (s *ToolService) ReturnTool(toolID string) (domain.Tool, error) {
-	return s.applyAndSave(toolID, func(t *domain.Tool) error {
+func (s *ToolService) ReturnTool(toolID, actorID, notes string) (domain.Tool, error) {
+	var priorUserID string
+	tool, err := s.applyAndSave(toolID, func(t *domain.Tool) error {
 		if t.CurrentUserId == nil {
 			return fmt.Errorf("%w: tool is already checked in", domain.ErrValidation)
+		}
+		// capture prior user id before clearing
+		if t.CurrentUserId != nil {
+			priorUserID = *t.CurrentUserId
 		}
 		t.CurrentUserId = nil
 		t.Status = domain.ToolStatusInOffice
 		return nil
 	})
+	if err != nil {
+		return domain.Tool{}, err
+	}
+	if s.events != nil {
+		_ = s.events.LogToolCheckedIn(toolID, priorUserID, pickActor(actorID, priorUserID), notes)
+	}
+	return tool, nil
 }
 
 // SendToMaintenance moves a tool to maintenance status.
-func (s *ToolService) SendToMaintenance(toolID string) (domain.Tool, error) {
-	return s.applyAndSave(toolID, func(t *domain.Tool) error {
+func (s *ToolService) SendToMaintenance(toolID, actorID, notes string) (domain.Tool, error) {
+	tool, err := s.applyAndSave(toolID, func(t *domain.Tool) error {
 		if t.Status == domain.ToolStatusLost {
 			return fmt.Errorf("%w: lost tools cannot be sent to maintenance", domain.ErrValidation)
 		}
 		if t.Status == domain.ToolStatusMaintenance {
 			return nil
 		}
-		// Not clearing current_user_id here
 		t.Status = domain.ToolStatusMaintenance
 		return nil
 	})
+	if err != nil {
+		return domain.Tool{}, err
+	}
+	if s.events != nil {
+		_ = s.events.LogToolMaintenance(toolID, pickActor(actorID, ""), notes)
+	}
+	return tool, nil
 }
 
 // MarkLost marks a tool as lost.
-func (s *ToolService) MarkLost(toolID string) (domain.Tool, error) {
-	return s.applyAndSave(toolID, func(t *domain.Tool) error {
+func (s *ToolService) MarkLost(toolID, actorID, notes string) (domain.Tool, error) {
+	tool, err := s.applyAndSave(toolID, func(t *domain.Tool) error {
 		if t.Status == domain.ToolStatusLost {
 			return nil
 		}
 		t.Status = domain.ToolStatusLost
 		return nil
 	})
+	if err != nil {
+		return domain.Tool{}, err
+	}
+	if s.events != nil {
+		_ = s.events.LogToolLost(toolID, pickActor(actorID, ""), notes)
+	}
+	return tool, nil
 }
 
-func (s *ToolService) DeleteTool(id string) error {
+// pickActor chooses actorID if provided, else fallback.
+func pickActor(actorID, fallback string) string {
+	if actorID != "" {
+		return actorID
+	}
+	return fallback
+}
+
+func (s *ToolService) DeleteTool(id, actorID, notes string) error {
 	if err := domain.ValidateUUID(id, "tool_id"); err != nil {
 		return err
 	}
-	return s.Repo.Delete(id)
+	// load to get ID pointer value
+	t, err := s.Repo.Get(id)
+	if err != nil {
+		return err
+	}
+	if err := s.Repo.Delete(id); err != nil {
+		return err
+	}
+	if s.events != nil && t.ID != nil {
+		_ = s.events.LogToolDeleted(*t.ID, actorID, notes)
+	}
+	return nil
+}
+
+func (s *ToolService) ListToolsByUser(userID string, limit, offset int) ([]domain.Tool, error) {
+	if err := domain.ValidateUUID(userID, "user_id"); err != nil {
+		return nil, err
+	}
+	return s.Repo.ListByUser(userID, limit, offset)
 }
 
 func (s *ToolService) ListToolsByStatus(status domain.ToolStatus, limit, offset int) ([]domain.Tool, error) {

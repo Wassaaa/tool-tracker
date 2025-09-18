@@ -95,9 +95,9 @@ func (r *PostgresToolRepo) Get(id string) (domain.Tool, error) {
 }
 
 func (r *PostgresToolRepo) Update(t domain.Tool) (domain.Tool, error) {
-	query := `UPDATE tools SET name = $1, status = $2 WHERE id = $3 RETURNING ` + r.toolColumns()
+	query := `UPDATE tools SET name = $1, status = $2, current_user_id = $3 WHERE id = $4 RETURNING ` + r.toolColumns()
 
-	row := r.db.QueryRow(query, t.Name, t.Status, t.ID)
+	row := r.db.QueryRow(query, t.Name, t.Status, t.CurrentUserId, t.ID)
 	tool, err := r.scanTool(row)
 	if err != nil {
 		if err == sql.ErrNoRows {
