@@ -6,6 +6,8 @@ import (
 	"github.com/wassaaa/tool-tracker/cmd/api/internal/domain"
 )
 
+//go:generate mockgen -source=user_service.go -destination=mocks/mock_user_interfaces.go -package=mocks
+
 type UserRepo interface {
 	Create(name string, email string, role domain.UserRole) (domain.User, error)
 	List(limit, offset int) ([]domain.User, error)

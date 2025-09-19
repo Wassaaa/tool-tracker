@@ -6,6 +6,8 @@ import (
 	"github.com/wassaaa/tool-tracker/cmd/api/internal/domain"
 )
 
+//go:generate mockgen -source=tool_service.go -destination=mocks/mock_interfaces.go -package=mocks
+
 type ToolRepo interface {
 	Create(name string, status domain.ToolStatus) (domain.Tool, error)
 	List(limit, offset int) ([]domain.Tool, error)

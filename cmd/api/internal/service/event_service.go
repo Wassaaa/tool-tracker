@@ -5,6 +5,8 @@ import (
 	"github.com/wassaaa/tool-tracker/cmd/api/internal/repo"
 )
 
+//go:generate mockgen -source=event_service.go -destination=mocks/mock_event_interfaces.go -package=mocks
+
 type EventRepo interface {
 	Create(eventType domain.EventType, toolID *string, userID *string, actorID *string, notes string, metadata *string) (domain.Event, error)
 	List(limit, offset int) ([]domain.Event, error)
