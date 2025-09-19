@@ -1,0 +1,10 @@
+{
+  "recommendations": [
+    "golang.go",
+    "ms-vscode.vscode-json",
+    "cosmtrek.air",
+    "ms-vscode-remote.remote-containers",
+    "bradlc.vscode-tailwindcss"
+  ],
+  "unwantedRecommendations": []
+}

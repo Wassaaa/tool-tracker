@@ -9,6 +9,8 @@
 *.dylib
 __debug*
 tmp/
+.go/
+.direnv/
 
 # Test binary, built with `go test -c`
 *.test

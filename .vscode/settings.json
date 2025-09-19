@@ -4,5 +4,9 @@
   "editor.detectIndentation": false,
   "editor.formatOnSave": true,
   "go.lintTool": "golangci-lint",
-  "go.lintOnSave": "package"
+  "go.lintOnSave": "package",
+  "go.gopath": "${workspaceFolder}/.go",
+  "go.testFlags": ["-v"],
+  "go.buildFlags": ["-v"],
+"nixEnvSelector.nixFile": "${workspaceFolder}/flake.nix"
 }
