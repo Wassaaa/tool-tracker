@@ -42,8 +42,12 @@
             export GOCACHE="$PWD/.go/cache"
             mkdir -p "$GOPATH" "$GOCACHE"
 
+            # Add Go bin directory to PATH for tools like mockgen
+            export PATH="$GOPATH/bin:$PATH"
+
             # VS Code will inherit these environment variables
             echo "GOPATH set to: $GOPATH"
+            echo "Go tools directory added to PATH"
           '';
         };
       }
