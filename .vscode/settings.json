@@ -8,5 +8,6 @@
   "go.gopath": "${workspaceFolder}/.go",
   "go.testFlags": ["-v"],
   "go.buildFlags": ["-v"],
-"nixEnvSelector.nixFile": "${workspaceFolder}/flake.nix"
+"nixEnvSelector.nixFile": "${workspaceFolder}/flake.nix",
+"makefile.configureOnOpen": false
 }
