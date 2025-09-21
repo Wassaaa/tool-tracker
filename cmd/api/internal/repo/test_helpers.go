@@ -114,6 +114,30 @@ func createTestEvent(t *testing.T, db *sql.DB, eventType domain.EventType, toolI
 	return eventID
 }
 
+// createTestToolWithUser creates a tool checked out to a specific user
+func createTestToolWithUser(t *testing.T, db *sql.DB, toolName string, userName, userEmail string, role domain.UserRole) (toolID, userID string) {
+	userID = createTestUser(t, db, userName, userEmail, role)
+
+	var tool_id string
+	err := db.QueryRow(
+		"INSERT INTO tools (name, status, current_user_id) VALUES ($1, $2, $3) RETURNING id",
+		toolName, domain.ToolStatusCheckedOut, userID,
+	).Scan(&tool_id)
+	require.NoError(t, err)
+	return tool_id, userID
+}
+
+// assertEventExists verifies an event exists with specific criteria
+func assertEventExists(t *testing.T, db *sql.DB, eventType domain.EventType, toolID, userID *string) {
+	var count int
+	err := db.QueryRow(
+		"SELECT COUNT(*) FROM events WHERE type = $1 AND ($2::uuid IS NULL OR tool_id = $2) AND ($3::uuid IS NULL OR user_id = $3 OR actor_id = $3)",
+		eventType, toolID, userID,
+	).Scan(&count)
+	require.NoError(t, err)
+	require.Greater(t, count, 0, "Expected event of type %s not found", eventType)
+}
+
 // cleanupSharedTestInfrastructure is called by TestMain to cleanup containers
 func cleanupSharedTestInfrastructure() {
 	ctx := context.Background()

@@ -144,6 +144,49 @@ func TestPostgresToolRepo_PostgreSQLFeatures(t *testing.T) {
 		assert.True(t, updated.LastCheckedOutAt.After(tool.CreatedAt))
 	})
 
+	t.Run("List by User", func(t *testing.T) {
+		// Create users
+		user1ID := createTestUser(t, db, "User 1", "user1@example.com", domain.UserRoleEmployee)
+		user2ID := createTestUser(t, db, "User 2", "user2@example.com", domain.UserRoleEmployee)
+
+		// Create tools checked out to different users
+		tool1, err := repo.Create("User1 Tool 1", domain.ToolStatusInOffice)
+		require.NoError(t, err)
+		tool1.CurrentUserId = &user1ID
+		tool1.Status = domain.ToolStatusCheckedOut
+		_, err = repo.Update(tool1)
+		require.NoError(t, err)
+
+		tool2, err := repo.Create("User1 Tool 2", domain.ToolStatusInOffice)
+		require.NoError(t, err)
+		tool2.CurrentUserId = &user1ID
+		tool2.Status = domain.ToolStatusCheckedOut
+		_, err = repo.Update(tool2)
+		require.NoError(t, err)
+
+		tool3, err := repo.Create("User2 Tool", domain.ToolStatusInOffice)
+		require.NoError(t, err)
+		tool3.CurrentUserId = &user2ID
+		tool3.Status = domain.ToolStatusCheckedOut
+		_, err = repo.Update(tool3)
+		require.NoError(t, err)
+
+		// Test ListByUser
+		user1Tools, err := repo.ListByUser(user1ID, 10, 0)
+		require.NoError(t, err)
+		assert.GreaterOrEqual(t, len(user1Tools), 2)
+		for _, tool := range user1Tools {
+			assert.Equal(t, &user1ID, tool.CurrentUserId)
+		}
+
+		user2Tools, err := repo.ListByUser(user2ID, 10, 0)
+		require.NoError(t, err)
+		assert.GreaterOrEqual(t, len(user2Tools), 1)
+		for _, tool := range user2Tools {
+			assert.Equal(t, &user2ID, tool.CurrentUserId)
+		}
+	})
+
 	t.Run("List by Status", func(t *testing.T) {
 		// Create tools with different statuses
 		_, err := repo.Create("Available 1", domain.ToolStatusInOffice)
@@ -180,6 +223,17 @@ func TestPostgresToolRepo_ErrorCases(t *testing.T) {
 	t.Run("Get Invalid UUID", func(t *testing.T) {
 		_, err := repo.Get("invalid-uuid")
 		assert.Error(t, err)
+	})
+
+	t.Run("Update Non-existent Tool", func(t *testing.T) {
+		nonExistentTool := domain.Tool{
+			ID:     func() *string { s := "00000000-0000-0000-0000-000000000000"; return &s }(),
+			Name:   "Non-existent Tool",
+			Status: domain.ToolStatusInOffice,
+		}
+		_, err := repo.Update(nonExistentTool)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "tool not found")
 	})
 
 	t.Run("Delete Non-existent Tool", func(t *testing.T) {
