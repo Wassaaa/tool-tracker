@@ -58,14 +58,41 @@ build-clean:
 test: generate
 	go test ./...
 
+test-repo: generate
+	go test ./cmd/api/internal/repo -v
+
+test-service: generate
+	go test ./cmd/api/internal/service -v
+
+test-domain: generate
+	go test ./cmd/api/internal/domain -v
+
 test-coverage: generate
 	go test -cover ./...
+
+test-coverage-html: generate
+	go test -coverprofile=coverage.out ./...
+	go tool cover -html=coverage.out -o coverage.html
+	@echo "Coverage report generated: coverage.html"
 
 test-verbose: generate
 	go test -v ./...
 
 test-race: generate
 	go test -race ./...
+
+test-integration: generate
+	go test -tags=integration ./...
+
+test-unit: generate
+	go test -short ./...
+
+test-benchmark: generate
+	go test -bench=. ./...
+
+test-watch:
+	@command -v entr >/dev/null 2>&1 || { echo "entr is required for watch mode. Install it first."; exit 1; }
+	find . -name "*.go" | entr -c go test ./...
 
 check-lint:
 	golangci-lint run
@@ -78,7 +105,7 @@ check-fmt:
 
 check: check-fmt check-vet check-lint test
 
-.PHONY: generate mocks build build-clean test test-coverage test-verbose test-race check-lint check-vet check-fmt check
+.PHONY: generate mocks build build-clean test test-repo test-service test-domain test-coverage test-coverage-html test-verbose test-race test-integration test-unit test-benchmark test-watch check-lint check-vet check-fmt check
 
 ################################################################################
 # CLEAN
@@ -90,6 +117,7 @@ clean-mocks:
 clean-artifacts:
 	rm -rf bin/
 	rm -f coverage.out
+	rm -f coverage.html
 	rm -f tmp/main
 
 clean: clean-artifacts
