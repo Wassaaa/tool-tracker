@@ -1,170 +1,215 @@
-# Tool Tracker Makefile
+# Tool Tracker Monorepo Makefile
 
-all: build
+.PHONY: help setup dev build test clean
 
-stop: 
-	docker compose down
+all: dev
 
 ################################################################################
 # SETUP
 ################################################################################
 
-deps:
-	go mod download
-	go mod tidy
-
-deps-update:
-	go get -u ./...
-	go mod tidy
-
-.PHONY: deps deps-update
+setup:
+	pnpm install
 
 ################################################################################
 # DEVELOPMENT
 ################################################################################
 
 dev:
-	docker-compose up -d && air
+	pnpm dev
 
-dev-build:
-	docker-compose build
+dev-frontend:
+	pnpm dev:frontend
 
-dev-logs:
-	docker-compose logs -f
+dev-backend:
+	pnpm dev:backend
 
 dev-stop:
-	docker-compose down
-
-dev-restart: dev-stop dev
-
-.PHONY: dev dev-build dev-logs dev-stop dev-restart
+	pnpm dev:stop
 
 ################################################################################
-# BUILD & TESTING
+# BUILD
 ################################################################################
 
-generate:
-	go generate ./...
+build:
+	pnpm build
 
-mocks:
-	go generate ./cmd/api/internal/service
+build-frontend:
+	pnpm build:frontend
 
-build: generate
-	go build -o bin/tool-tracker cmd/api/main.go
+build-backend:
+	pnpm build:backend
 
-build-clean:
-	rm -rf bin/
+################################################################################
+# TESTING
+################################################################################
 
-test: generate
-	go test ./...
+test:
+	pnpm test
 
-test-repo: generate
-	go test ./cmd/api/internal/repo -v
+test-frontend:
+	pnpm test:frontend
 
-test-service: generate
-	go test ./cmd/api/internal/service -v
-
-test-domain: generate
-	go test ./cmd/api/internal/domain -v
-
-test-coverage: generate
-	go test -cover ./...
-
-test-coverage-html: generate
-	go test -coverprofile=coverage.out ./...
-	go tool cover -html=coverage.out -o coverage.html
-	@echo "Coverage report generated: coverage.html"
-
-test-verbose: generate
-	go test -v ./...
-
-test-race: generate
-	go test -race ./...
-
-test-integration: generate
-	go test -tags=integration ./...
-
-test-unit: generate
-	go test -short ./...
-
-test-benchmark: generate
-	go test -bench=. ./...
-
-test-watch:
-	@command -v entr >/dev/null 2>&1 || { echo "entr is required for watch mode. Install it first."; exit 1; }
-	find . -name "*.go" | entr -c go test ./...
-
-check-lint:
-	golangci-lint run
-
-check-vet:
-	go vet ./...
-
-check-fmt:
-	go fmt ./...
-
-check: check-fmt check-vet check-lint test
-
-.PHONY: generate mocks build build-clean test test-repo test-service test-domain test-coverage test-coverage-html test-verbose test-race test-integration test-unit test-benchmark test-watch check-lint check-vet check-fmt check
+test-backend:
+	pnpm test:backend
 
 ################################################################################
 # CLEAN
 ################################################################################
 
-clean-mocks:
-	rm -f cmd/api/internal/service/mocks/*.go
+clean:
+	pnpm clean
 
-clean-artifacts:
-	rm -rf bin/
-	rm -f coverage.out
-	rm -f coverage.html
-	rm -f tmp/main
+clean-go:
+	cd packages/backend && rm -rf bin/ && rm -f coverage.out && rm -f coverage.html && rm -f tmp/main
 
-clean: clean-artifacts
-	docker-compose down --remove-orphans
+clean-docker:
+	cd packages/backend && docker-compose down --remove-orphans
 
-clean-all: clean clean-mocks
-	go clean -cache
-	go clean -testcache
+clean-all: clean clean-go clean-docker
+	rm -rf node_modules
+	rm -rf packages/*/node_modules
+	rm -rf packages/backend/tmp
+	cd packages/backend && go clean -cache && go clean -testcache
 
-.PHONY: clean-mocks clean-artifacts clean clean-all
+################################################################################
+# BACKEND SPECIFIC
+################################################################################
+
+# Go dependencies
+deps:
+	cd packages/backend && go mod download && go mod tidy
+
+deps-update:
+	cd packages/backend && go get -u ./... && go mod tidy
+
+# Code generation
+generate:
+	cd packages/backend && go generate ./...
+
+mocks:
+	cd packages/backend && go generate ./cmd/api/internal/service
+
+# Backend build
+build-go:
+	cd packages/backend && go build -o bin/tool-tracker cmd/api/main.go
+
+# Backend testing
+test-go:
+	cd packages/backend && go test ./...
+
+test-repo:
+	cd packages/backend && go test ./cmd/api/internal/repo -v
+
+test-service:
+	cd packages/backend && go test ./cmd/api/internal/service -v
+
+test-domain:
+	cd packages/backend && go test ./cmd/api/internal/domain -v
+
+test-coverage:
+	cd packages/backend && go test -cover ./...
+
+test-coverage-html:
+	cd packages/backend && go test -coverprofile=coverage.out ./... && go tool cover -html=coverage.out -o coverage.html
+	@echo "Coverage report generated: packages/backend/coverage.html"
+
+test-verbose:
+	cd packages/backend && go test -v ./...
+
+test-race:
+	cd packages/backend && go test -race ./...
+
+test-integration:
+	cd packages/backend && go test -tags=integration ./...
+
+test-unit:
+	cd packages/backend && go test -short ./...
+
+test-benchmark:
+	cd packages/backend && go test -bench=. ./...
+
+test-watch:
+	@command -v entr >/dev/null 2>&1 || { echo "entr is required for watch mode. Install it first."; exit 1; }
+	cd packages/backend && find . -name "*.go" | entr -c go test ./...
+
+# Code quality
+check-lint:
+	cd packages/backend && golangci-lint run
+
+check-vet:
+	cd packages/backend && go vet ./...
+
+check-fmt:
+	cd packages/backend && go fmt ./...
+
+check-go: check-fmt check-vet check-lint test-go
+
+# Docker commands
+docker-up:
+	cd packages/backend && docker-compose up -d
+
+docker-down:
+	cd packages/backend && docker-compose down
+
+docker-logs:
+	cd packages/backend && docker-compose logs -f
+
+docker-build:
+	cd packages/backend && docker-compose build
 
 ################################################################################
 # HELP
 ################################################################################
 
 help:
-	@echo "Tool Tracker Development Commands"
+	@echo "Tool Tracker Monorepo Commands"
 	@echo ""
 	@echo "Setup:"
+	@echo "  setup           Install all dependencies"
 	@echo "  deps            Download and tidy Go dependencies"
-	@echo "  deps-update     Update all dependencies to latest versions"
+	@echo "  deps-update     Update all Go dependencies"
 	@echo ""
 	@echo "Development:"
-	@echo "  dev             Start Docker development environment with hot reload"
-	@echo "  dev-build       Build Docker development containers"
-	@echo "  dev-logs        Show development logs"
+	@echo "  dev             Start development environment (both frontend & backend)"
+	@echo "  dev-frontend    Start only frontend"
+	@echo "  dev-backend     Start only backend"
 	@echo "  dev-stop        Stop development environment"
-	@echo "  dev-restart     Restart development environment"
 	@echo ""
-	@echo "Build & Testing:"
-	@echo "  generate        Generate all code (mocks, etc.)"
-	@echo "  mocks           Generate only service mocks"
-	@echo "  build           Build the application binary"
-	@echo "  build-clean     Clean build artifacts"
+	@echo "Build:"
+	@echo "  build           Build all packages"
+	@echo "  build-frontend  Build only frontend"
+	@echo "  build-backend   Build only backend"
+	@echo "  build-go        Build Go binary"
+	@echo ""
+	@echo "Testing:"
 	@echo "  test            Run all tests"
-	@echo "  test-coverage   Run tests with coverage report"
-	@echo "  test-verbose    Run tests with verbose output"
-	@echo "  test-race       Run tests with race detection"
-	@echo "  check-lint      Run Go linter"
-	@echo "  check-vet       Run Go vet"
+	@echo "  test-frontend   Run frontend tests"
+	@echo "  test-backend    Run backend tests"
+	@echo "  test-go         Run Go tests"
+	@echo "  test-coverage   Run Go tests with coverage"
+	@echo "  test-verbose    Run Go tests with verbose output"
+	@echo "  test-race       Run Go tests with race detection"
+	@echo "  test-watch      Watch Go tests (requires entr)"
+	@echo ""
+	@echo "Code Generation:"
+	@echo "  generate        Generate all Go code"
+	@echo "  mocks           Generate service mocks"
+	@echo ""
+	@echo "Code Quality:"
+	@echo "  check-go        Run all Go checks (fmt, vet, lint, test)"
 	@echo "  check-fmt       Format Go code"
-	@echo "  check           Run all checks and tests"
+	@echo "  check-vet       Run Go vet"
+	@echo "  check-lint      Run Go linter (requires golangci-lint)"
+	@echo ""
+	@echo "Docker:"
+	@echo "  docker-up       Start Docker containers"
+	@echo "  docker-down     Stop Docker containers"
+	@echo "  docker-logs     Show Docker logs"
+	@echo "  docker-build    Build Docker containers"
 	@echo ""
 	@echo "Clean:"
-	@echo "  clean-mocks     Remove generated mock files"
-	@echo "  clean-artifacts Remove build artifacts"
-	@echo "  clean           Stop services and clean artifacts"
-	@echo "  clean-all       Deep clean including Go caches"
-
-.PHONY: help
+	@echo "  clean           Clean build artifacts"
+	@echo "  clean-go        Clean Go build artifacts"
+	@echo "  clean-docker    Stop Docker containers"
+	@echo "  clean-all       Clean everything including caches"

@@ -1,0 +1,43 @@
+{
+  "name": "tool-tracker",
+  "version": "1.0.0",
+  "description": "A REST API and frontend for tracking company tools and equipment",
+  "private": true,
+  "scripts": {
+    "dev": "turbo dev",
+    "dev:frontend": "turbo dev --filter=frontend",
+    "dev:backend": "turbo dev --filter=backend",
+    "build": "turbo build",
+    "build:frontend": "turbo build --filter=frontend",
+    "build:backend": "turbo build --filter=backend",
+    "test": "turbo test",
+    "test:frontend": "turbo test --filter=frontend",
+    "test:backend": "turbo test --filter=backend",
+    "clean": "turbo clean",
+    "lint": "turbo lint",
+    "type-check": "turbo type-check",
+    "deps": "pnpm install"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.6"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=10.0.0"
+  },
+  "packageManager": "pnpm@10.15.1",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Wassaaa/tool-tracker.git"
+  },
+  "keywords": [
+    "tool-tracker",
+    "inventory",
+    "go",
+    "react",
+    "typescript",
+    "monorepo"
+  ],
+  "author": "Wassaaa",
+  "license": "MIT"
+}

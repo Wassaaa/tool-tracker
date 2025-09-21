@@ -20,12 +20,20 @@
       {
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
+            # Backend (Go)
             go # Latest Go version
             gopls # Go language server
             gotools # Additional Go tools (goimports, etc.)
             air # Hot reload tool (since you're using it)
+
+            # Frontend (Node.js)
+            nodejs_22 # Latest LTS Node.js version
+            nodePackages.pnpm # Latest pnpm package manager
+
+            # Container tools
             docker
             docker-compose
+
             # Development tools
             git
             curl
@@ -35,7 +43,9 @@
           shellHook = ''
             echo "Tool Tracker development environment loaded!"
             echo "Go version: $(go version)"
-            echo "Available commands: go, air, docker, docker-compose"
+            echo "Node version: $(node --version)"
+            echo "pnpm version: $(pnpm --version)"
+            echo "Available commands: go, air, docker, docker-compose, node, pnpm"
 
             # Set up Go environment
             export GOPATH="$PWD/.go"
@@ -45,9 +55,13 @@
             # Add Go bin directory to PATH for tools like mockgen
             export PATH="$GOPATH/bin:$PATH"
 
+            # Set up Node.js environment
+            export NODE_ENV="development"
+
             # VS Code will inherit these environment variables
             echo "GOPATH set to: $GOPATH"
             echo "Go tools directory added to PATH"
+            echo "NODE_ENV set to: $NODE_ENV"
           '';
         };
       }
