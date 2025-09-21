@@ -10,7 +10,7 @@
 __debug*
 tmp/
 .go/
-.direnv/
+.direnv/ 
 bin/
 
 # Test binary, built with `go test -c`

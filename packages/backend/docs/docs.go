@@ -1077,7 +1077,6 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "actor_id": {
-                    "description": "Who the action was performed on",
                     "type": "string"
                 },
                 "created_at": {
@@ -1087,21 +1086,18 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "metadata": {
-                    "description": "JSON for additional data",
                     "type": "string"
                 },
                 "notes": {
                     "type": "string"
                 },
                 "tool_id": {
-                    "description": "Pointer for optional field",
                     "type": "string"
                 },
                 "type": {
                     "$ref": "#/definitions/domain.EventType"
                 },
                 "user_id": {
-                    "description": "Who performed the action",
                     "type": "string"
                 }
             }
@@ -1139,7 +1135,13 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "current_user_id": {
+                    "type": "string"
+                },
                 "id": {
+                    "type": "string"
+                },
+                "last_checked_out_at": {
                     "type": "string"
                 },
                 "name": {

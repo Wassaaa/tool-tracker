@@ -3,24 +3,20 @@ definitions:
   domain.Event:
     properties:
       actor_id:
-        description: Who the action was performed on
         type: string
       created_at:
         type: string
       id:
         type: string
       metadata:
-        description: JSON for additional data
         type: string
       notes:
         type: string
       tool_id:
-        description: Pointer for optional field
         type: string
       type:
         $ref: '#/definitions/domain.EventType'
       user_id:
-        description: Who performed the action
         type: string
     type: object
   domain.EventType:
@@ -51,7 +47,11 @@ definitions:
     properties:
       created_at:
         type: string
+      current_user_id:
+        type: string
       id:
+        type: string
+      last_checked_out_at:
         type: string
       name:
         type: string
