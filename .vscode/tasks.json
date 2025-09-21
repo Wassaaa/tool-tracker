@@ -15,10 +15,7 @@
                 "focus": false,
                 "panel": "new"
             },
-            "problemMatcher": "$go",
-            "runOptions": {
-                "runOn": "folderOpen"
-            },
+            "problemMatcher": "$go"
         },
     ]
 }
