@@ -1,104 +1,27 @@
 package repo
 
 import (
-	"context"
-	"database/sql"
 	"os"
-	"sync"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/testcontainers/testcontainers-go/modules/postgres"
-	"github.com/wassaaa/tool-tracker/cmd/api/internal/database"
 	"github.com/wassaaa/tool-tracker/cmd/api/internal/domain"
-
-	_ "github.com/lib/pq"
 )
 
-var (
-	testDB        *sql.DB
-	testContainer *postgres.PostgresContainer
-	setupOnce     sync.Once
-)
-
-// setupSharedTestDB creates a single PostgreSQL container for all tests
-func setupSharedTestDB(t *testing.T) *sql.DB {
-	setupOnce.Do(func() {
-		ctx := context.Background()
-
-		// Create a single PostgreSQL container for all tests
-		var err error
-		testContainer, err = postgres.Run(ctx, "postgres",
-			postgres.WithDatabase("test_tooltracker"),
-			postgres.WithUsername("test_user"),
-			postgres.WithPassword("test_pass"),
-		)
-		require.NoError(t, err)
-
-		// Get connection string
-		connStr, err := testContainer.ConnectionString(ctx, "sslmode=disable")
-		require.NoError(t, err)
-
-		// Connect to the test database
-		testDB, err = sql.Open("postgres", connStr)
-		require.NoError(t, err)
-
-		// Verify connection with retry
-		var pingErr error
-		for i := 0; i < 10; i++ {
-			pingErr = testDB.Ping()
-			if pingErr == nil {
-				break
-			}
-			time.Sleep(500 * time.Millisecond)
-		}
-		require.NoError(t, pingErr, "Failed to connect to test database")
-
-		err = database.RunMigrations(testDB)
-		require.NoError(t, err, "Failed to run migrations on test database")
-	})
-
-	// Clean up data before each test
-	cleanupTestData(t, testDB)
-	return testDB
-}
-
-// cleanupTestData removes all test data while preserving schema
-func cleanupTestData(t *testing.T, db *sql.DB) {
-	// Delete in reverse order of dependencies
-	tables := []string{"events", "tools", "users"}
-	for _, table := range tables {
-		// Skip system user (id = 1) if it exists
-		query := "DELETE FROM " + table
-		if table == "users" {
-			query += " WHERE id != '00000000-0000-0000-0000-000000000001'"
-		}
-		_, err := db.Exec(query)
-		require.NoError(t, err, "Failed to clean up table: "+table)
-	}
-}
-
-// TestMain handles setup and teardown for the entire test suite
+// TestMain handles setup and teardown for the entire repo test suite
 func TestMain(m *testing.M) {
 	code := m.Run()
 
-	// Cleanup after all tests
-	if testContainer != nil {
-		ctx := context.Background()
-		_ = testContainer.Terminate(ctx)
-	}
-	if testDB != nil {
-		testDB.Close()
-	}
+	// Cleanup shared test infrastructure
+	cleanupSharedTestInfrastructure()
 
 	os.Exit(code)
 }
 
 // TestPostgresToolRepo_CRUD tests all basic CRUD operations
 func TestPostgresToolRepo_CRUD(t *testing.T) {
-	db := setupSharedTestDB(t)
+	db := setupSharedRepoTestDB(t)
 	repo := NewPostgresToolRepo(db)
 
 	t.Run("Create Tool", func(t *testing.T) {
@@ -182,7 +105,7 @@ func TestPostgresToolRepo_CRUD(t *testing.T) {
 
 // TestPostgresToolRepo_PostgreSQLFeatures tests database-specific features
 func TestPostgresToolRepo_PostgreSQLFeatures(t *testing.T) {
-	db := setupSharedTestDB(t)
+	db := setupSharedRepoTestDB(t)
 	repo := NewPostgresToolRepo(db)
 
 	t.Run("UUID Primary Keys", func(t *testing.T) {
@@ -202,12 +125,7 @@ func TestPostgresToolRepo_PostgreSQLFeatures(t *testing.T) {
 
 	t.Run("Database Triggers Work", func(t *testing.T) {
 		// Create user first (needed for checkout)
-		var userID string
-		err := db.QueryRow(
-			"INSERT INTO users (name, email, role) VALUES ($1, $2, $3) RETURNING id",
-			"Test User", "test@example.com", "EMPLOYEE",
-		).Scan(&userID)
-		require.NoError(t, err)
+		userID := createTestUser(t, db, "Test User", "test@example.com", domain.UserRoleEmployee)
 
 		// Create tool
 		tool, err := repo.Create("Trigger Test", domain.ToolStatusInOffice)
@@ -250,7 +168,7 @@ func TestPostgresToolRepo_PostgreSQLFeatures(t *testing.T) {
 
 // TestPostgresToolRepo_ErrorCases tests error handling
 func TestPostgresToolRepo_ErrorCases(t *testing.T) {
-	db := setupSharedTestDB(t)
+	db := setupSharedRepoTestDB(t)
 	repo := NewPostgresToolRepo(db)
 
 	t.Run("Get Non-existent Tool", func(t *testing.T) {
