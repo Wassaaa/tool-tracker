@@ -2,68 +2,23 @@ package service
 
 import (
 	"testing"
-	"time"
 
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wassaaa/tool-tracker/cmd/api/internal/domain"
 	"github.com/wassaaa/tool-tracker/cmd/api/internal/repo"
-	"github.com/wassaaa/tool-tracker/cmd/api/internal/service/mocks"
 )
-
-// Helper function to create a valid event for testing
-func createTestEvent(id string, eventType domain.EventType, toolID, userID, actorID *string, notes string) domain.Event {
-	now := time.Now()
-	return domain.Event{
-		ID:        id,
-		Type:      eventType,
-		ToolID:    toolID,
-		UserID:    userID,
-		ActorID:   actorID,
-		Notes:     notes,
-		Metadata:  nil,
-		CreatedAt: now,
-	}
-}
-
-// EventTestMocks holds all the mock dependencies for event service testing
-type EventTestMocks struct {
-	Ctrl     *gomock.Controller
-	MockRepo *mocks.MockEventRepo
-	Service  *EventService
-}
-
-// setupEventMocks creates all necessary mocks for event service testing
-func setupEventMocks(t *testing.T) *EventTestMocks {
-	ctrl := gomock.NewController(t)
-
-	mockRepo := mocks.NewMockEventRepo(ctrl)
-
-	return &EventTestMocks{
-		Ctrl:     ctrl,
-		MockRepo: mockRepo,
-		Service:  NewEventService(mockRepo),
-	}
-}
-
-// teardown cleans up the mocks
-func (etm *EventTestMocks) teardown() {
-	etm.Ctrl.Finish()
-}
 
 // TestEventService_CreateEvent tests the event creation workflow
 func TestEventService_CreateEvent(t *testing.T) {
-	toolID := "123e4567-e89b-12d3-a456-426614174000"
-	userID := "456e7890-e89b-12d3-a456-426614174000"
-	actorID := "789e0123-e89b-12d3-a456-426614174000"
-
 	t.Run("Successful event creation", func(t *testing.T) {
-		mocks := setupEventMocks(t)
-		defer mocks.teardown()
+		mocks := SetupEventServiceMocks(t)
+		defer mocks.Teardown()
 
-		eventID := "abc12345-e89b-12d3-a456-426614174000"
-		createdEvent := createTestEvent(eventID, domain.EventTypeToolCheckedOut, &toolID, &userID, &actorID, "Tool checked out for project")
+		toolID := TestToolID
+		userID := TestUserID
+		actorID := TestActorID
+		createdEvent := CreateTestEvent(TestEventID, domain.EventTypeToolCheckedOut, &toolID, &userID, &actorID, "Tool checked out for project")
 
 		// Set expectations
 		mocks.MockRepo.EXPECT().Create(
@@ -91,9 +46,11 @@ func TestEventService_CreateEvent(t *testing.T) {
 	})
 
 	t.Run("Repository error should propagate", func(t *testing.T) {
-		mocks := setupEventMocks(t)
-		defer mocks.teardown()
+		mocks := SetupEventServiceMocks(t)
+		defer mocks.Teardown()
 
+		toolID := TestToolID
+		actorID := TestActorID
 		repoError := assert.AnError
 		mocks.MockRepo.EXPECT().Create(
 			domain.EventTypeToolCreated,
@@ -120,16 +77,15 @@ func TestEventService_CreateEvent(t *testing.T) {
 
 // TestEventService_ListEvents tests the event listing with filters
 func TestEventService_ListEvents(t *testing.T) {
-	toolID := "123e4567-e89b-12d3-a456-426614174000"
-	userID := "456e7890-e89b-12d3-a456-426614174000"
-
 	t.Run("List events without filters", func(t *testing.T) {
-		mocks := setupEventMocks(t)
-		defer mocks.teardown()
+		mocks := SetupEventServiceMocks(t)
+		defer mocks.Teardown()
 
+		toolID := TestToolID
+		userID := TestUserID
 		expectedEvents := []domain.Event{
-			createTestEvent("event1", domain.EventTypeToolCheckedOut, &toolID, &userID, nil, "Event 1"),
-			createTestEvent("event2", domain.EventTypeToolCheckedIn, &toolID, &userID, nil, "Event 2"),
+			CreateTestEvent("event1", domain.EventTypeToolCheckedOut, &toolID, &userID, nil, "Event 1"),
+			CreateTestEvent("event2", domain.EventTypeToolCheckedIn, &toolID, &userID, nil, "Event 2"),
 		}
 
 		expectedFilter := repo.EventFilter{}
@@ -142,12 +98,14 @@ func TestEventService_ListEvents(t *testing.T) {
 	})
 
 	t.Run("List events with event type filter", func(t *testing.T) {
-		mocks := setupEventMocks(t)
-		defer mocks.teardown()
+		mocks := SetupEventServiceMocks(t)
+		defer mocks.Teardown()
 
+		toolID := TestToolID
+		userID := TestUserID
 		eventTypeStr := string(domain.EventTypeToolCheckedOut)
 		expectedEvents := []domain.Event{
-			createTestEvent("event1", domain.EventTypeToolCheckedOut, &toolID, &userID, nil, "Event 1"),
+			CreateTestEvent("event1", domain.EventTypeToolCheckedOut, &toolID, &userID, nil, "Event 1"),
 		}
 
 		eventTypeFilter := domain.EventTypeToolCheckedOut
@@ -163,11 +121,13 @@ func TestEventService_ListEvents(t *testing.T) {
 	})
 
 	t.Run("List events with tool ID filter", func(t *testing.T) {
-		mocks := setupEventMocks(t)
-		defer mocks.teardown()
+		mocks := SetupEventServiceMocks(t)
+		defer mocks.Teardown()
 
+		toolID := TestToolID
+		userID := TestUserID
 		expectedEvents := []domain.Event{
-			createTestEvent("event1", domain.EventTypeToolCheckedOut, &toolID, &userID, nil, "Event 1"),
+			CreateTestEvent("event1", domain.EventTypeToolCheckedOut, &toolID, &userID, nil, "Event 1"),
 		}
 
 		expectedFilter := repo.EventFilter{
@@ -182,8 +142,8 @@ func TestEventService_ListEvents(t *testing.T) {
 	})
 
 	t.Run("Default limit applied when zero", func(t *testing.T) {
-		mocks := setupEventMocks(t)
-		defer mocks.teardown()
+		mocks := SetupEventServiceMocks(t)
+		defer mocks.Teardown()
 
 		expectedFilter := repo.EventFilter{}
 		mocks.MockRepo.EXPECT().ListWithFilter(expectedFilter, 50, 0).Return([]domain.Event{}, nil)
@@ -194,8 +154,8 @@ func TestEventService_ListEvents(t *testing.T) {
 	})
 
 	t.Run("Maximum limit enforced", func(t *testing.T) {
-		mocks := setupEventMocks(t)
-		defer mocks.teardown()
+		mocks := SetupEventServiceMocks(t)
+		defer mocks.Teardown()
 
 		expectedFilter := repo.EventFilter{}
 		mocks.MockRepo.EXPECT().ListWithFilter(expectedFilter, 500, 0).Return([]domain.Event{}, nil)
@@ -206,8 +166,8 @@ func TestEventService_ListEvents(t *testing.T) {
 	})
 
 	t.Run("Invalid event type should fail", func(t *testing.T) {
-		mocks := setupEventMocks(t)
-		defer mocks.teardown()
+		mocks := SetupEventServiceMocks(t)
+		defer mocks.Teardown()
 
 		invalidEventType := "invalid_event_type"
 
@@ -220,27 +180,25 @@ func TestEventService_ListEvents(t *testing.T) {
 
 // TestEventService_GetEvent tests event retrieval by ID
 func TestEventService_GetEvent(t *testing.T) {
-	eventID := "123e4567-e89b-12d3-a456-426614174000"
-
 	t.Run("Successful event retrieval", func(t *testing.T) {
-		mocks := setupEventMocks(t)
-		defer mocks.teardown()
+		mocks := SetupEventServiceMocks(t)
+		defer mocks.Teardown()
 
-		expectedEvent := createTestEvent(eventID, domain.EventTypeToolCreated, nil, nil, nil, "Event retrieved")
+		expectedEvent := CreateTestEvent(TestEventID, domain.EventTypeToolCreated, nil, nil, nil, "Event retrieved")
 
-		mocks.MockRepo.EXPECT().Get(eventID).Return(expectedEvent, nil)
+		mocks.MockRepo.EXPECT().Get(TestEventID).Return(expectedEvent, nil)
 
-		result, err := mocks.Service.GetEvent(eventID)
+		result, err := mocks.Service.GetEvent(TestEventID)
 
 		require.NoError(t, err)
 		assert.Equal(t, expectedEvent, result)
 	})
 
 	t.Run("Invalid event ID should fail", func(t *testing.T) {
-		mocks := setupEventMocks(t)
-		defer mocks.teardown()
+		mocks := SetupEventServiceMocks(t)
+		defer mocks.Teardown()
 
-		_, err := mocks.Service.GetEvent("invalid-uuid")
+		_, err := mocks.Service.GetEvent(InvalidUUID)
 
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "event_id must be a valid UUID")
@@ -249,30 +207,29 @@ func TestEventService_GetEvent(t *testing.T) {
 
 // TestEventService_GetToolHistory tests tool history retrieval
 func TestEventService_GetToolHistory(t *testing.T) {
-	toolID := "123e4567-e89b-12d3-a456-426614174000"
-
 	t.Run("Successful tool history retrieval", func(t *testing.T) {
-		mocks := setupEventMocks(t)
-		defer mocks.teardown()
+		mocks := SetupEventServiceMocks(t)
+		defer mocks.Teardown()
 
+		toolID := TestToolID
 		expectedEvents := []domain.Event{
-			createTestEvent("event1", domain.EventTypeToolCreated, &toolID, nil, nil, "Tool created"),
-			createTestEvent("event2", domain.EventTypeToolCheckedOut, &toolID, nil, nil, "Tool checked out"),
+			CreateTestEvent("event1", domain.EventTypeToolCreated, &toolID, nil, nil, "Tool created"),
+			CreateTestEvent("event2", domain.EventTypeToolCheckedOut, &toolID, nil, nil, "Tool checked out"),
 		}
 
-		mocks.MockRepo.EXPECT().ListByTool(toolID, 1000, 0).Return(expectedEvents, nil)
+		mocks.MockRepo.EXPECT().ListByTool(TestToolID, 1000, 0).Return(expectedEvents, nil)
 
-		result, err := mocks.Service.GetToolHistory(toolID)
+		result, err := mocks.Service.GetToolHistory(TestToolID)
 
 		require.NoError(t, err)
 		assert.Equal(t, expectedEvents, result)
 	})
 
 	t.Run("Invalid tool ID should fail", func(t *testing.T) {
-		mocks := setupEventMocks(t)
-		defer mocks.teardown()
+		mocks := SetupEventServiceMocks(t)
+		defer mocks.Teardown()
 
-		_, err := mocks.Service.GetToolHistory("invalid-uuid")
+		_, err := mocks.Service.GetToolHistory(InvalidUUID)
 
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "tool_id must be a valid UUID")
@@ -281,30 +238,29 @@ func TestEventService_GetToolHistory(t *testing.T) {
 
 // TestEventService_GetUserActivity tests user activity retrieval
 func TestEventService_GetUserActivity(t *testing.T) {
-	userID := "123e4567-e89b-12d3-a456-426614174000"
-
 	t.Run("Successful user activity retrieval", func(t *testing.T) {
-		mocks := setupEventMocks(t)
-		defer mocks.teardown()
+		mocks := SetupEventServiceMocks(t)
+		defer mocks.Teardown()
 
+		userID := TestUserID
 		expectedEvents := []domain.Event{
-			createTestEvent("event1", domain.EventTypeToolCheckedOut, nil, &userID, nil, "User checked out tool"),
-			createTestEvent("event2", domain.EventTypeToolCheckedIn, nil, &userID, nil, "User checked in tool"),
+			CreateTestEvent("event1", domain.EventTypeToolCheckedOut, nil, &userID, nil, "User checked out tool"),
+			CreateTestEvent("event2", domain.EventTypeToolCheckedIn, nil, &userID, nil, "User checked in tool"),
 		}
 
-		mocks.MockRepo.EXPECT().ListByUser(userID, 1000, 0).Return(expectedEvents, nil)
+		mocks.MockRepo.EXPECT().ListByUser(TestUserID, 1000, 0).Return(expectedEvents, nil)
 
-		result, err := mocks.Service.GetUserActivity(userID)
+		result, err := mocks.Service.GetUserActivity(TestUserID)
 
 		require.NoError(t, err)
 		assert.Equal(t, expectedEvents, result)
 	})
 
 	t.Run("Invalid user ID should fail", func(t *testing.T) {
-		mocks := setupEventMocks(t)
-		defer mocks.teardown()
+		mocks := SetupEventServiceMocks(t)
+		defer mocks.Teardown()
 
-		_, err := mocks.Service.GetUserActivity("invalid-uuid")
+		_, err := mocks.Service.GetUserActivity(InvalidUUID)
 
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "user_id must be a valid UUID")
@@ -313,15 +269,13 @@ func TestEventService_GetUserActivity(t *testing.T) {
 
 // TestEventService_LogToolCreated tests the convenience logging method
 func TestEventService_LogToolCreated(t *testing.T) {
-	toolID := "123e4567-e89b-12d3-a456-426614174000"
-	actorID := "789e0123-e89b-12d3-a456-426614174000"
-
 	t.Run("Successful tool creation log", func(t *testing.T) {
-		mocks := setupEventMocks(t)
-		defer mocks.teardown()
+		mocks := SetupEventServiceMocks(t)
+		defer mocks.Teardown()
 
-		eventID := "abc12345-e89b-12d3-a456-426614174000"
-		createdEvent := createTestEvent(eventID, domain.EventTypeToolCreated, &toolID, nil, &actorID, "Tool created via API")
+		toolID := TestToolID
+		actorID := TestActorID
+		createdEvent := CreateTestEvent(TestEventID, domain.EventTypeToolCreated, &toolID, nil, &actorID, "Tool created via API")
 
 		mocks.MockRepo.EXPECT().Create(
 			domain.EventTypeToolCreated,
@@ -332,7 +286,7 @@ func TestEventService_LogToolCreated(t *testing.T) {
 			(*string)(nil),
 		).Return(createdEvent, nil)
 
-		err := mocks.Service.LogToolCreated(toolID, actorID, "Tool created via API")
+		err := mocks.Service.LogToolCreated(TestToolID, TestActorID, "Tool created via API")
 
 		require.NoError(t, err)
 	})
@@ -340,16 +294,14 @@ func TestEventService_LogToolCreated(t *testing.T) {
 
 // TestEventService_LogToolCheckedOut tests the checkout logging method
 func TestEventService_LogToolCheckedOut(t *testing.T) {
-	toolID := "123e4567-e89b-12d3-a456-426614174000"
-	userID := "456e7890-e89b-12d3-a456-426614174000"
-	actorID := "789e0123-e89b-12d3-a456-426614174000"
-
 	t.Run("Successful checkout log", func(t *testing.T) {
-		mocks := setupEventMocks(t)
-		defer mocks.teardown()
+		mocks := SetupEventServiceMocks(t)
+		defer mocks.Teardown()
 
-		eventID := "abc12345-e89b-12d3-a456-426614174000"
-		createdEvent := createTestEvent(eventID, domain.EventTypeToolCheckedOut, &toolID, &userID, &actorID, "Tool checked out for project")
+		toolID := TestToolID
+		userID := TestUserID
+		actorID := TestActorID
+		createdEvent := CreateTestEvent(TestEventID, domain.EventTypeToolCheckedOut, &toolID, &userID, &actorID, "Tool checked out for project")
 
 		mocks.MockRepo.EXPECT().Create(
 			domain.EventTypeToolCheckedOut,
@@ -360,7 +312,270 @@ func TestEventService_LogToolCheckedOut(t *testing.T) {
 			(*string)(nil),
 		).Return(createdEvent, nil)
 
-		err := mocks.Service.LogToolCheckedOut(toolID, userID, actorID, "Tool checked out for project")
+		err := mocks.Service.LogToolCheckedOut(TestToolID, TestUserID, TestActorID, "Tool checked out for project")
+
+		require.NoError(t, err)
+	})
+}
+
+// TestEventService_GetEventsByType tests getting events by type
+func TestEventService_GetEventsByType(t *testing.T) {
+	t.Run("Successful get events by type", func(t *testing.T) {
+		mocks := SetupEventServiceMocks(t)
+		defer mocks.Teardown()
+
+		expectedEvents := []domain.Event{
+			CreateTestEvent("event1", domain.EventTypeToolCreated, nil, nil, nil, "Tool created"),
+			CreateTestEvent("event2", domain.EventTypeToolCreated, nil, nil, nil, "Another tool created"),
+		}
+
+		mocks.MockRepo.EXPECT().ListByType(domain.EventTypeToolCreated, 50, 0).Return(expectedEvents, nil)
+
+		result, err := mocks.Service.GetEventsByType(domain.EventTypeToolCreated, 50, 0)
+
+		require.NoError(t, err)
+		assert.Equal(t, expectedEvents, result)
+	})
+
+	t.Run("Default limit applied when zero", func(t *testing.T) {
+		mocks := SetupEventServiceMocks(t)
+		defer mocks.Teardown()
+
+		mocks.MockRepo.EXPECT().ListByType(domain.EventTypeToolCreated, 50, 0).Return([]domain.Event{}, nil)
+
+		_, err := mocks.Service.GetEventsByType(domain.EventTypeToolCreated, 0, 0)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("Maximum limit enforced", func(t *testing.T) {
+		mocks := SetupEventServiceMocks(t)
+		defer mocks.Teardown()
+
+		mocks.MockRepo.EXPECT().ListByType(domain.EventTypeToolCreated, 500, 0).Return([]domain.Event{}, nil)
+
+		_, err := mocks.Service.GetEventsByType(domain.EventTypeToolCreated, 600, 0)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("Negative offset corrected", func(t *testing.T) {
+		mocks := SetupEventServiceMocks(t)
+		defer mocks.Teardown()
+
+		mocks.MockRepo.EXPECT().ListByType(domain.EventTypeToolCreated, 50, 0).Return([]domain.Event{}, nil)
+
+		_, err := mocks.Service.GetEventsByType(domain.EventTypeToolCreated, 50, -5)
+
+		require.NoError(t, err)
+	})
+}
+
+// TestEventService_GetEventCount tests getting event count
+func TestEventService_GetEventCount(t *testing.T) {
+	t.Run("Successful get event count", func(t *testing.T) {
+		mocks := SetupEventServiceMocks(t)
+		defer mocks.Teardown()
+
+		expectedCount := 100
+
+		mocks.MockRepo.EXPECT().Count().Return(expectedCount, nil)
+
+		result, err := mocks.Service.GetEventCount()
+
+		require.NoError(t, err)
+		assert.Equal(t, expectedCount, result)
+	})
+
+	t.Run("Repository error should propagate", func(t *testing.T) {
+		mocks := SetupEventServiceMocks(t)
+		defer mocks.Teardown()
+
+		repoError := assert.AnError
+		mocks.MockRepo.EXPECT().Count().Return(0, repoError)
+
+		_, err := mocks.Service.GetEventCount()
+
+		assert.Error(t, err)
+		assert.Equal(t, repoError, err)
+	})
+}
+
+// TestEventService_AdditionalLoggingMethods tests the remaining logging convenience methods
+func TestEventService_AdditionalLoggingMethods(t *testing.T) {
+	t.Run("LogToolUpdated", func(t *testing.T) {
+		mocks := SetupEventServiceMocks(t)
+		defer mocks.Teardown()
+
+		toolID := TestToolID
+		actorID := TestActorID
+		createdEvent := CreateTestEvent(TestEventID, domain.EventTypeToolUpdated, &toolID, nil, &actorID, "Tool updated")
+
+		mocks.MockRepo.EXPECT().Create(
+			domain.EventTypeToolUpdated,
+			&toolID,
+			(*string)(nil),
+			&actorID,
+			"Tool updated",
+			(*string)(nil),
+		).Return(createdEvent, nil)
+
+		err := mocks.Service.LogToolUpdated(TestToolID, TestActorID, "Tool updated")
+
+		require.NoError(t, err)
+	})
+
+	t.Run("LogToolDeleted", func(t *testing.T) {
+		mocks := SetupEventServiceMocks(t)
+		defer mocks.Teardown()
+
+		toolID := TestToolID
+		actorID := TestActorID
+		createdEvent := CreateTestEvent(TestEventID, domain.EventTypeToolDeleted, &toolID, nil, &actorID, "Tool deleted")
+
+		mocks.MockRepo.EXPECT().Create(
+			domain.EventTypeToolDeleted,
+			&toolID,
+			(*string)(nil),
+			&actorID,
+			"Tool deleted",
+			(*string)(nil),
+		).Return(createdEvent, nil)
+
+		err := mocks.Service.LogToolDeleted(TestToolID, TestActorID, "Tool deleted")
+
+		require.NoError(t, err)
+	})
+
+	t.Run("LogToolCheckedIn", func(t *testing.T) {
+		mocks := SetupEventServiceMocks(t)
+		defer mocks.Teardown()
+
+		toolID := TestToolID
+		userID := TestUserID
+		actorID := TestActorID
+		createdEvent := CreateTestEvent(TestEventID, domain.EventTypeToolCheckedIn, &toolID, &userID, &actorID, "Tool checked in")
+
+		mocks.MockRepo.EXPECT().Create(
+			domain.EventTypeToolCheckedIn,
+			&toolID,
+			&userID,
+			&actorID,
+			"Tool checked in",
+			(*string)(nil),
+		).Return(createdEvent, nil)
+
+		err := mocks.Service.LogToolCheckedIn(TestToolID, TestUserID, TestActorID, "Tool checked in")
+
+		require.NoError(t, err)
+	})
+
+	t.Run("LogToolMaintenance", func(t *testing.T) {
+		mocks := SetupEventServiceMocks(t)
+		defer mocks.Teardown()
+
+		toolID := TestToolID
+		userID := TestUserID
+		createdEvent := CreateTestEvent(TestEventID, domain.EventTypeToolMaintenance, &toolID, &userID, nil, "Tool needs maintenance")
+
+		mocks.MockRepo.EXPECT().Create(
+			domain.EventTypeToolMaintenance,
+			&toolID,
+			&userID,
+			(*string)(nil),
+			"Tool needs maintenance",
+			(*string)(nil),
+		).Return(createdEvent, nil)
+
+		err := mocks.Service.LogToolMaintenance(TestToolID, TestUserID, "Tool needs maintenance")
+
+		require.NoError(t, err)
+	})
+
+	t.Run("LogToolLost", func(t *testing.T) {
+		mocks := SetupEventServiceMocks(t)
+		defer mocks.Teardown()
+
+		toolID := TestToolID
+		userID := TestUserID
+		createdEvent := CreateTestEvent(TestEventID, domain.EventTypeToolLost, &toolID, &userID, nil, "Tool lost")
+
+		mocks.MockRepo.EXPECT().Create(
+			domain.EventTypeToolLost,
+			&toolID,
+			&userID,
+			(*string)(nil),
+			"Tool lost",
+			(*string)(nil),
+		).Return(createdEvent, nil)
+
+		err := mocks.Service.LogToolLost(TestToolID, TestUserID, "Tool lost")
+
+		require.NoError(t, err)
+	})
+
+	t.Run("LogUserCreated", func(t *testing.T) {
+		mocks := SetupEventServiceMocks(t)
+		defer mocks.Teardown()
+
+		userID := TestUserID
+		actorID := TestActorID
+		createdEvent := CreateTestEvent(TestEventID, domain.EventTypeUserCreated, nil, &userID, &actorID, "User created")
+
+		mocks.MockRepo.EXPECT().Create(
+			domain.EventTypeUserCreated,
+			(*string)(nil),
+			&userID,
+			&actorID,
+			"User created",
+			(*string)(nil),
+		).Return(createdEvent, nil)
+
+		err := mocks.Service.LogUserCreated(TestUserID, TestActorID, "User created")
+
+		require.NoError(t, err)
+	})
+
+	t.Run("LogUserUpdated", func(t *testing.T) {
+		mocks := SetupEventServiceMocks(t)
+		defer mocks.Teardown()
+
+		userID := TestUserID
+		actorID := TestActorID
+		createdEvent := CreateTestEvent(TestEventID, domain.EventTypeUserUpdated, nil, &userID, &actorID, "User updated")
+
+		mocks.MockRepo.EXPECT().Create(
+			domain.EventTypeUserUpdated,
+			(*string)(nil),
+			&userID,
+			&actorID,
+			"User updated",
+			(*string)(nil),
+		).Return(createdEvent, nil)
+
+		err := mocks.Service.LogUserUpdated(TestUserID, TestActorID, "User updated")
+
+		require.NoError(t, err)
+	})
+
+	t.Run("LogUserDeleted", func(t *testing.T) {
+		mocks := SetupEventServiceMocks(t)
+		defer mocks.Teardown()
+
+		userID := TestUserID
+		actorID := TestActorID
+		createdEvent := CreateTestEvent(TestEventID, domain.EventTypeUserDeleted, nil, &userID, &actorID, "User deleted")
+
+		mocks.MockRepo.EXPECT().Create(
+			domain.EventTypeUserDeleted,
+			(*string)(nil),
+			&userID,
+			&actorID,
+			"User deleted",
+			(*string)(nil),
+		).Return(createdEvent, nil)
+
+		err := mocks.Service.LogUserDeleted(TestUserID, TestActorID, "User deleted")
 
 		require.NoError(t, err)
 	})
