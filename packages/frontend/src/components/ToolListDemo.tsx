@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ToolTrackerAPI, type DomainTool } from '../api/client';
+import { getTools, type DomainTool } from '../api/client';
 
 export const ToolListDemo: React.FC = () => {
   const [tools, setTools] = useState<DomainTool[]>([]);
@@ -10,13 +10,20 @@ export const ToolListDemo: React.FC = () => {
     const fetchTools = async () => {
       try {
         setLoading(true);
-        // The API client is fully typed!
-        const response = await ToolTrackerAPI.getTools({ limit: 10, offset: 0 });
-        
-        // Response is typed as Record<string, DomainTool[]>
-        // This matches the backend's response format
-        const toolsArray = response.tools || [];
-        setTools(toolsArray);
+        // The API client is fully typed with modern async/await!
+        const response = await getTools({
+          query: {
+            limit: 10,
+            offset: 0,
+          },
+        });
+
+        // The response has the data property
+        if (response.data) {
+          // Response is typed as Record<string, DomainTool[]>
+          const toolsArray = Object.values(response.data).flat();
+          setTools(toolsArray);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch tools');
       } finally {
@@ -49,7 +56,7 @@ export const ToolListDemo: React.FC = () => {
   return (
     <div className="p-6">
       <h2 className="text-2xl font-bold text-gray-900 mb-6">Tool Inventory</h2>
-      
+
       {tools.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
           No tools found. Try adding some tools first.
@@ -62,16 +69,25 @@ export const ToolListDemo: React.FC = () => {
                 <h3 className="text-lg font-semibold text-gray-900">{tool.name}</h3>
                 <StatusBadge status={tool.status} />
               </div>
-              
+
               <div className="space-y-2 text-sm text-gray-600">
-                <div><strong>ID:</strong> {tool.id}</div>
+                <div>
+                  <strong>ID:</strong> {tool.id}
+                </div>
                 {tool.current_user_id && (
-                  <div><strong>Checked out to:</strong> {tool.current_user_id}</div>
+                  <div>
+                    <strong>Checked out to:</strong> {tool.current_user_id}
+                  </div>
                 )}
                 {tool.last_checked_out_at && (
-                  <div><strong>Last checked out:</strong> {new Date(tool.last_checked_out_at).toLocaleDateString()}</div>
+                  <div>
+                    <strong>Last checked out:</strong>{' '}
+                    {new Date(tool.last_checked_out_at).toLocaleDateString()}
+                  </div>
                 )}
-                <div><strong>Created:</strong> {new Date(tool.created_at || '').toLocaleDateString()}</div>
+                <div>
+                  <strong>Created:</strong> {new Date(tool.created_at ?? '').toLocaleDateString()}
+                </div>
               </div>
             </div>
           ))}
@@ -113,7 +129,9 @@ const StatusBadge: React.FC<{ status?: string }> = ({ status }) => {
   };
 
   return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(status)}`}>
+    <span
+      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(status)}`}
+    >
       {getStatusText(status)}
     </span>
   );

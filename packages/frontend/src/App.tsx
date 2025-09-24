@@ -1,4 +1,4 @@
-import './App.css'
+import './App.css';
 
 function App() {
   return (
@@ -8,9 +8,7 @@ function App() {
           <div className="uppercase tracking-wide text-sm text-indigo-500 font-semibold">
             Tool Tracker
           </div>
-          <h1 className="mt-2 text-xl font-medium text-black">
-            Frontend Setup Complete!
-          </h1>
+          <h1 className="mt-2 text-xl font-medium text-black">Frontend Setup Complete!</h1>
           <p className="mt-2 text-gray-500">
             React + Vite + TypeScript + Tailwind CSS v4.1 is ready to go.
           </p>
@@ -22,7 +20,7 @@ function App() {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;
