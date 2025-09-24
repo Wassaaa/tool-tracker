@@ -73,6 +73,11 @@
             echo "GOPATH set to: $GOPATH"
             echo "Go tools directory added to PATH"
             echo "NODE_ENV set to: $NODE_ENV"
+            echo ""
+            echo "🐳 Containerized development:"
+            echo "  make docker-up    # Start with HTTPS at https://tool-tracker.local"
+            echo "  make docker-down  # Stop containers"
+            echo "  make trust-ca     # Trust HTTPS certificates"
           '';
         };
       }

@@ -2,7 +2,7 @@
 
 .PHONY: help setup dev build test clean
 
-all: dev
+all: docker-up
 
 ################################################################################
 # SETUP
@@ -12,7 +12,7 @@ setup:
 	pnpm install
 
 ################################################################################
-# DEVELOPMENT
+# DEVELOPMENT - LOCAL (legacy, may not work without CORS)
 ################################################################################
 
 dev:
@@ -26,6 +26,158 @@ dev-backend:
 
 dev-stop:
 	pnpm dev:stop
+
+################################################################################
+# DEVELOPMENT - CONTAINERIZED (recommended)
+################################################################################
+
+COMPOSE_FILE := docker-compose.yml
+
+# Start containerized development environment
+docker-up: ## Start containerized development environment with HTTPS
+	@echo "🚀 Starting containerized development environment..."
+	@if ! grep -q "tool-tracker.local" /etc/hosts; then \
+		echo "� Note: tool-tracker.local not found in /etc/hosts"; \
+		echo "   Using https://localhost as fallback"; \
+	fi
+	@docker-compose -f $(COMPOSE_FILE) up --build -d
+	@echo ""
+	@echo "✅ Services started!"
+	@if grep -q "tool-tracker.local" /etc/hosts; then \
+		echo "🌐 Main App: https://tool-tracker.local"; \
+		echo "🔧 Backend API: https://tool-tracker.local/api"; \
+		echo "📚 API Docs: https://tool-tracker.local/swagger/"; \
+	else \
+		echo "🌐 Main App: https://localhost"; \
+		echo "🔧 Backend API: https://localhost/api"; \
+		echo "📚 API Docs: https://localhost/swagger/"; \
+	fi
+	@echo "🗄️  Database Admin: http://localhost:9000"
+	@echo ""
+	@echo "⚠️  First time setup:"
+	@echo "   1. Accept the self-signed certificate in your browser"
+	@echo "   2. Or run 'make trust-ca' to install CA system-wide"
+
+# Stop containerized development environment
+docker-down: ## Stop containerized development environment
+	@echo "🛑 Stopping development environment..."
+	@docker-compose -f $(COMPOSE_FILE) down
+	@echo "✅ Services stopped!"
+
+# View containerized development logs
+docker-logs: ## View containerized development logs (specify SERVICE=name for specific service)
+	@docker-compose -f $(COMPOSE_FILE) logs -f $(SERVICE)
+
+# Restart containerized services
+docker-restart: ## Restart containerized services (specify SERVICE=name for specific service)
+	@if [ -n "$(SERVICE)" ]; then \
+		echo "🔄 Restarting $(SERVICE)..."; \
+		docker-compose -f $(COMPOSE_FILE) restart $(SERVICE); \
+	else \
+		echo "🔄 Restarting all services..."; \
+		docker-compose -f $(COMPOSE_FILE) restart; \
+	fi
+
+# Execute command in container
+docker-exec: ## Execute command in container (specify SERVICE=name CMD="command")
+	@docker-compose -f $(COMPOSE_FILE) exec $(or $(SERVICE),backend) $(CMD)
+
+# Generate API docs and client in containers
+docker-generate: ## Generate API docs and client in containers
+	@echo "🔧 Generating API docs and client..."
+	@docker-compose -f $(COMPOSE_FILE) exec backend make generate
+	@docker-compose -f $(COMPOSE_FILE) exec frontend pnpm generate-api
+	@echo "✅ Generation complete!"
+
+# Check containerized environment status
+docker-status: ## Check containerized environment status
+	@echo "📊 Development Environment Status"
+	@echo "=================================="
+	@docker-compose -f $(COMPOSE_FILE) ps
+	@echo ""
+	@if grep -q "tool-tracker.local" /etc/hosts; then \
+		echo "✅ tool-tracker.local configured"; \
+	else \
+		echo "💡 tool-tracker.local not found (using localhost)"; \
+	fi
+
+# Rebuild container images
+docker-build: ## Rebuild all container images
+	@echo "🔨 Building all services..."
+	@docker-compose -f $(COMPOSE_FILE) build --no-cache
+	@echo "✅ Build complete!"
+
+# Clean up containerized environment
+docker-clean: ## Clean up containerized environment completely
+	@echo "🧹 Cleaning up development environment..."
+	@docker-compose -f $(COMPOSE_FILE) down --remove-orphans
+	@docker system prune -f
+	@echo "✅ Cleanup complete!"
+
+# Show containerized development help
+docker-help: ## Show containerized development commands
+	@echo "🛠️  Tool Tracker - Containerized Development Environment"
+	@echo ""
+	@echo "Quick Start:"
+	@echo "  make docker-up     # Start everything with HTTPS"
+	@echo "  make docker-down   # Stop everything"
+	@echo "  make docker-clean  # Clean up completely"
+	@echo ""
+	@echo "Usage Examples:"
+	@echo "  make docker-logs                              # View all logs"
+	@echo "  make docker-logs SERVICE=backend             # View backend logs"
+	@echo "  make docker-restart SERVICE=frontend         # Restart frontend"
+	@echo "  make docker-exec SERVICE=frontend CMD='pnpm lint'  # Run command"
+	@echo ""
+	@echo "🌐 After 'make docker-up', visit: https://tool-tracker.local"
+
+################################################################################
+# DEV CERTS - CA Certificate Management
+################################################################################
+# Windows (Admin PowerShell) trust example:
+#   certutil -addstore -f Root caddy-docker-root.crt
+# Windows untrust example:
+#   certutil -delstore Root "Caddy Local Authority - 2025 ECC Root"
+################################################################################
+
+CA_DOCKER_CERT := ./caddy-docker-root.crt
+CA_DOCKER_ROOT := /data/caddy/pki/authorities/local/root.crt
+
+# Extract CA certificate from Caddy container
+get-ca: ## Extract Caddy's CA certificate for HTTPS trust
+	@echo "🔐 Exporting Caddy CA root certificate..."
+	@docker cp $$(docker-compose -f $(COMPOSE_FILE) ps -q caddy):$(CA_DOCKER_ROOT) $(CA_DOCKER_CERT) 2>/dev/null || \
+		(echo "❌ Failed to extract CA cert. Is Caddy running? Try 'make docker-up' first." && exit 1)
+	@echo "✅ Exported: $(CA_DOCKER_CERT)"
+	@echo "📋 Next: 'make trust-ca' to install system-wide"
+
+# Install CA certificate system-wide
+trust-ca: get-ca ## Install Caddy's CA certificate system-wide (requires sudo)
+	@echo "🔐 Installing CA certificate system-wide..."
+	@OS=$$(uname); \
+	if [ "$$OS" = "Darwin" ]; then \
+		sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain "$(CA_DOCKER_CERT)"; \
+	elif [ "$$OS" = "Linux" ]; then \
+		sudo cp "$(CA_DOCKER_CERT)" /usr/local/share/ca-certificates/caddy-docker-root.crt; \
+		sudo update-ca-certificates; \
+	else \
+		echo "⚠️  Unsupported OS: $$OS"; \
+		echo "Manual install: Import $(CA_DOCKER_CERT) as trusted root CA"; \
+	fi
+	@echo "✅ CA certificate installed! Restart your browser."
+	@rm -f $(CA_DOCKER_CERT)
+
+# Remove CA certificate from system
+untrust-ca: ## Remove Caddy's CA certificate from system (requires sudo)
+	@echo "🗑️  Removing Caddy CA certificate..."
+	@OS=$$(uname); \
+	if [ "$$OS" = "Darwin" ]; then \
+		sudo security delete-certificate -c "Caddy Local Authority" /Library/Keychains/System.keychain 2>/dev/null || true; \
+	elif [ "$$OS" = "Linux" ]; then \
+		sudo rm -f /usr/local/share/ca-certificates/caddy-docker-root.crt; \
+		sudo update-ca-certificates; \
+	fi
+	@echo "✅ CA certificate removed! Restart your browser."
 
 ################################################################################
 # BUILD
@@ -150,18 +302,7 @@ check-fmt:
 
 check-go: check-fmt check-vet check-lint test-go
 
-# Docker commands
-docker-up:
-	cd packages/backend && docker-compose up -d
 
-docker-down:
-	cd packages/backend && docker-compose down
-
-docker-logs:
-	cd packages/backend && docker-compose logs -f
-
-docker-build:
-	cd packages/backend && docker-compose build
 
 ################################################################################
 # HELP

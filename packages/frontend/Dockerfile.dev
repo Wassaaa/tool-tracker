@@ -1,0 +1,46 @@
+# Minimal Dockerfile for frontend development in monorepo
+FROM node:22-alpine AS base
+
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+WORKDIR /app
+
+# Copy workspace files (build context is root)
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY packages/frontend/package.json ./packages/frontend/package.json
+
+# Install all dependencies (monorepo style)
+RUN pnpm install --frozen-lockfile
+
+# Development stage - source code will be bind mounted
+FROM base AS frontend-dev
+
+# Re-enable corepack and ensure pnpm is available
+RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN which pnpm && pnpm --version
+
+WORKDIR /app/packages/frontend
+
+EXPOSE 3000
+
+CMD ["pnpm", "dev", "--host", "0.0.0.0"]
+
+# Production build stage
+FROM base AS frontend-build
+
+# Copy frontend source for build (generated API files should be committed)
+COPY packages/frontend/ ./packages/frontend/
+
+WORKDIR /app/packages/frontend
+
+# Build the application
+RUN pnpm build
+
+# Production stage
+FROM alpine:latest AS production
+
+# Copy built files
+COPY --from=frontend-build /app/packages/frontend/dist /app/dist
+
+EXPOSE 3000

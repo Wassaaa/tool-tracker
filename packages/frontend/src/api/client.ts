@@ -1,8 +1,8 @@
 // API Client using the modern @hey-api/openapi-ts generated code
 import { client } from './generated/client.gen';
 
-// Configure the API client
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api';
+// Configure the API client - in containerized setup, /api is proxied by Caddy
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api';
 
 client.setConfig({
   baseUrl: API_BASE_URL,

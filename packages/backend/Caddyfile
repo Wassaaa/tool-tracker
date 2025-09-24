@@ -1,0 +1,62 @@
+# Development configuration with local HTTPS
+{
+	# Enable local development with automatic HTTPS
+	auto_https disable_redirects
+	local_certs
+}
+
+# Main development site
+https://tool-tracker.local {
+	# API routes go to backend
+	handle /api/* {
+		reverse_proxy backend:8080
+	}
+
+	# Swagger documentation
+	handle /swagger/* {
+		reverse_proxy backend:8080
+	}
+
+	# Everything else goes to frontend (SPA routing)
+	handle /* {
+		reverse_proxy frontend:3000
+	}
+
+	# Enable compression
+	encode gzip
+
+	# Security headers
+	header {
+		# Enable HSTS
+		Strict-Transport-Security max-age=31536000;
+		# Prevent clickjacking
+		X-Frame-Options DENY
+		# Prevent content type sniffing
+		X-Content-Type-Options nosniff
+		# XSS protection
+		X-XSS-Protection "1; mode=block"
+	}
+}
+
+# HTTP redirect to HTTPS
+http://tool-tracker.local {
+	redir https://tool-tracker.local{uri}
+}
+
+# Optional: Also serve on localhost for convenience
+https://localhost {
+	# API routes go to backend
+	handle /api/* {
+		reverse_proxy backend:8080
+	}
+
+	# Swagger documentation
+	handle /swagger/* {
+		reverse_proxy backend:8080
+	}
+
+	# Everything else goes to frontend
+	handle /* {
+		reverse_proxy frontend:3000
+	}
+}

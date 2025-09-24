@@ -1,0 +1,50 @@
+# Multi-stage Dockerfile for backend development and production
+FROM golang:1.25-alpine AS base
+
+# Install development dependencies
+RUN apk add --no-cache git curl build-base
+
+WORKDIR /app
+
+# Copy go mod files
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Install development tools
+RUN go install github.com/air-verse/air@latest && \
+	go install github.com/golang/mock/mockgen@latest && \
+	go install github.com/swaggo/swag/cmd/swag@latest
+
+# Development stage
+FROM base AS backend-dev
+
+# Copy air config (will be bind mounted in development)
+COPY .air.toml ./
+
+# Ensure air is available in PATH
+RUN which air && air -v
+
+# Source code will be bind mounted, so no copying needed
+
+EXPOSE 8080
+
+CMD ["air", "-c", ".air.toml"]
+
+# Production stage
+FROM base AS backend-prod
+
+# Copy source code (generated files should already be committed)
+COPY . .
+
+# Build the application
+RUN CGO_ENABLED=0 GOOS=linux go build -o main ./cmd/api
+
+FROM alpine:3.19 AS production
+
+RUN apk --no-cache add ca-certificates tzdata
+
+WORKDIR /root/
+
+COPY --from=backend-prod /app/main .
+
+CMD ["./main"]

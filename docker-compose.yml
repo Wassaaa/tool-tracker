@@ -17,11 +17,12 @@ services:
 
   backend:
     build:
-      context: .
+      context: ./packages/backend
       dockerfile: Dockerfile.dev
+      target: backend-dev
     volumes:
       # Bind mount source for hot reload
-      - .:/app
+      - ./packages/backend:/app
       # Anonymous volumes for build artifacts
       - /app/tmp
       - /app/.go
@@ -39,18 +40,20 @@ services:
 
   frontend:
     build:
-      context: ../frontend
-      dockerfile: Dockerfile.dev
+      context: .
+      dockerfile: packages/frontend/Dockerfile.dev
+      target: frontend-dev
     volumes:
-      # Bind mount source for hot reload
-      - ../frontend:/app
-      # Anonymous volume for node_modules
+      # Bind mount frontend source for hot reload
+      - ./packages/frontend:/app/packages/frontend
+      # Anonymous volume for node_modules to avoid conflicts
       - /app/node_modules
+      - /app/packages/frontend/node_modules
     environment:
       - NODE_ENV=development
       - VITE_API_BASE_URL=/api
-    working_dir: /app
-    command: ["pnpm", "dev", "--host", "0.0.0.0"]
+    working_dir: /app/packages/frontend
+    command: ["/bin/sh", "-c", "cd /app/packages/frontend && pnpm dev --host 0.0.0.0"]
     networks:
       - app-network
 
@@ -60,7 +63,7 @@ services:
       - "443:443"
       - "80:80"
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
+      - ./packages/backend/Caddyfile:/etc/caddy/Caddyfile
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
