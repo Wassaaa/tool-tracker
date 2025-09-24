@@ -44,7 +44,7 @@
             echo "Tool Tracker development environment loaded!"
             echo "Go version: $(go version)"
             echo "Node version: $(node --version)"
-            echo "pnpm version: $(pnpm --version)"
+            echo "pnqpm version: $(pnpm --version)"
             echo "Available commands: go, air, docker, docker-compose, node, pnpm"
 
             # Set up Go environment
@@ -54,6 +54,17 @@
 
             # Add Go bin directory to PATH for tools like mockgen
             export PATH="$GOPATH/bin:$PATH"
+
+            # Install Go tools if not already present
+            if [ ! -f "$GOPATH/bin/mockgen" ]; then
+              echo "Installing mockgen..."
+              go install github.com/golang/mock/mockgen@latest
+            fi
+
+            if [ ! -f "$GOPATH/bin/swag" ]; then
+              echo "Installing swag..."
+              go install github.com/swaggo/swag/cmd/swag@latest
+            fi
 
             # Set up Node.js environment
             export NODE_ENV="development"

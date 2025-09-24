@@ -84,11 +84,16 @@ deps-update:
 	cd packages/backend && go get -u ./... && go mod tidy
 
 # Code generation
-generate:
-	cd packages/backend && go generate ./...
+generate: mocks swagger api-client
 
 mocks:
 	cd packages/backend && go generate ./cmd/api/internal/service
+
+swagger:
+	cd packages/backend && swag init -g cmd/api/main.go -o docs
+
+api-client: swagger
+	cd packages/frontend && pnpm generate-api
 
 # Backend build
 build-go:
@@ -193,8 +198,10 @@ help:
 	@echo "  test-watch      Watch Go tests (requires entr)"
 	@echo ""
 	@echo "Code Generation:"
-	@echo "  generate        Generate all Go code"
+	@echo "  generate        Generate all code (mocks, swagger, frontend API)"
 	@echo "  mocks           Generate service mocks"
+	@echo "  swagger         Generate Swagger documentation"
+	@echo "  api-client      Generate frontend API client"
 	@echo ""
 	@echo "Code Quality:"
 	@echo "  check-go        Run all Go checks (fmt, vet, lint, test)"
