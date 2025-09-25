@@ -1,7 +1,5 @@
 # Tool Tracker Monorepo Makefile
 
-.PHONY: help setup dev build test clean
-
 all: docker-up
 
 ################################################################################
@@ -12,20 +10,23 @@ setup:
 	pnpm install
 
 ################################################################################
-# DEVELOPMENT - LOCAL (legacy, may not work without CORS)
+# DEVELOPMENT - LOCAL
 ################################################################################
 
-dev:
+# Start all development services
+dev: ## Start all development services with Turbo
 	pnpm dev
 
-dev-frontend:
+# Start individual services
+dev-frontend: ## Start only frontend
 	pnpm dev:frontend
 
-dev-backend:
+dev-backend: ## Start only backend
 	pnpm dev:backend
 
-dev-stop:
-	pnpm dev:stop
+# Stop development services
+dev-stop: ## Stop development services
+	@pkill -f "turbo dev" 2>/dev/null || true
 
 ################################################################################
 # DEVELOPMENT - CONTAINERIZED (recommended)
@@ -40,7 +41,7 @@ docker-up: ## Start containerized development environment with HTTPS
 		echo "� Note: tool-tracker.local not found in /etc/hosts"; \
 		echo "   Using https://localhost as fallback"; \
 	fi
-	@docker-compose -f $(COMPOSE_FILE) up --build -d
+	@docker compose -f $(COMPOSE_FILE) up --build -d
 	@echo ""
 	@echo "✅ Services started!"
 	@if grep -q "tool-tracker.local" /etc/hosts; then \
@@ -61,39 +62,39 @@ docker-up: ## Start containerized development environment with HTTPS
 # Stop containerized development environment
 docker-down: ## Stop containerized development environment
 	@echo "🛑 Stopping development environment..."
-	@docker-compose -f $(COMPOSE_FILE) down
+	@docker compose -f $(COMPOSE_FILE) down
 	@echo "✅ Services stopped!"
 
 # View containerized development logs
 docker-logs: ## View containerized development logs (specify SERVICE=name for specific service)
-	@docker-compose -f $(COMPOSE_FILE) logs -f $(SERVICE)
+	@docker compose -f $(COMPOSE_FILE) logs -f $(SERVICE)
 
 # Restart containerized services
 docker-restart: ## Restart containerized services (specify SERVICE=name for specific service)
 	@if [ -n "$(SERVICE)" ]; then \
 		echo "🔄 Restarting $(SERVICE)..."; \
-		docker-compose -f $(COMPOSE_FILE) restart $(SERVICE); \
+		docker compose -f $(COMPOSE_FILE) restart $(SERVICE); \
 	else \
 		echo "🔄 Restarting all services..."; \
-		docker-compose -f $(COMPOSE_FILE) restart; \
+		docker compose -f $(COMPOSE_FILE) restart; \
 	fi
 
 # Execute command in container
 docker-exec: ## Execute command in container (specify SERVICE=name CMD="command")
-	@docker-compose -f $(COMPOSE_FILE) exec $(or $(SERVICE),backend) $(CMD)
+	@docker compose -f $(COMPOSE_FILE) exec $(or $(SERVICE),backend) $(CMD)
 
 # Generate API docs and client in containers
 docker-generate: ## Generate API docs and client in containers
 	@echo "🔧 Generating API docs and client..."
-	@docker-compose -f $(COMPOSE_FILE) exec backend make generate
-	@docker-compose -f $(COMPOSE_FILE) exec frontend pnpm generate-api
+	@docker compose -f $(COMPOSE_FILE) exec backend make generate
+	@docker compose -f $(COMPOSE_FILE) exec frontend pnpm generate-api
 	@echo "✅ Generation complete!"
 
 # Check containerized environment status
 docker-status: ## Check containerized environment status
 	@echo "📊 Development Environment Status"
 	@echo "=================================="
-	@docker-compose -f $(COMPOSE_FILE) ps
+	@docker compose -f $(COMPOSE_FILE) ps
 	@echo ""
 	@if grep -q "tool-tracker.local" /etc/hosts; then \
 		echo "✅ tool-tracker.local configured"; \
@@ -104,13 +105,13 @@ docker-status: ## Check containerized environment status
 # Rebuild container images
 docker-build: ## Rebuild all container images
 	@echo "🔨 Building all services..."
-	@docker-compose -f $(COMPOSE_FILE) build --no-cache
+	@docker compose -f $(COMPOSE_FILE) build --no-cache
 	@echo "✅ Build complete!"
 
 # Clean up containerized environment
 docker-clean: ## Clean up containerized environment completely
 	@echo "🧹 Cleaning up development environment..."
-	@docker-compose -f $(COMPOSE_FILE) down --remove-orphans
+	@docker compose -f $(COMPOSE_FILE) down --remove-orphans
 	@docker system prune -f
 	@echo "✅ Cleanup complete!"
 
@@ -142,42 +143,37 @@ docker-help: ## Show containerized development commands
 
 CA_DOCKER_CERT := ./caddy-docker-root.crt
 CA_DOCKER_ROOT := /data/caddy/pki/authorities/local/root.crt
+CA_LOCAL_CERT=./caddy-local-root.crt
+CA_LOCAL_ROOT=./packages/caddy/caddy-data/pki/authorities/local/root.crt
 
-# Extract CA certificate from Caddy container
-get-ca: ## Extract Caddy's CA certificate for HTTPS trust
-	@echo "🔐 Exporting Caddy CA root certificate..."
-	@docker cp $$(docker-compose -f $(COMPOSE_FILE) ps -q caddy):$(CA_DOCKER_ROOT) $(CA_DOCKER_CERT) 2>/dev/null || \
-		(echo "❌ Failed to extract CA cert. Is Caddy running? Try 'make docker-up' first." && exit 1)
-	@echo "✅ Exported: $(CA_DOCKER_CERT)"
-	@echo "📋 Next: 'make trust-ca' to install system-wide"
+get-ca:
+	@echo "Exporting dev CA roots (docker + local if present)..."
+	-@docker cp caddy:$(CA_DOCKER_ROOT) $(CA_DOCKER_CERT)
+	-@cp "$(CA_LOCAL_ROOT)" "$(CA_LOCAL_CERT)"
+	@echo "Exported (if present): $(CA_DOCKER_CERT) $(CA_LOCAL_CERT)"
+	@echo "Next: 'make trust-ca' to install; or on Windows use Admin PowerShell:"
+	@echo "    certutil -addstore -f Root $(CA_DOCKER_CERT)"
+	@echo "    certutil -addstore -f Root $(CA_LOCAL_CERT)"
 
-# Install CA certificate system-wide
-trust-ca: get-ca ## Install Caddy's CA certificate system-wide (requires sudo)
-	@echo "🔐 Installing CA certificate system-wide..."
+trust-ca:
 	@OS=$$(uname); \
+	echo "Installing CA(s) on $$OS..."; \
 	if [ "$$OS" = "Darwin" ]; then \
-		sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain "$(CA_DOCKER_CERT)"; \
+		[ -f "$(CA_LOCAL_CERT)" ]  && sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain "$(CA_LOCAL_CERT)" || true; \
+		[ -f "$(CA_DOCKER_CERT)" ] && sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain "$(CA_DOCKER_CERT)" || true; \
 	elif [ "$$OS" = "Linux" ]; then \
-		sudo cp "$(CA_DOCKER_CERT)" /usr/local/share/ca-certificates/caddy-docker-root.crt; \
-		sudo update-ca-certificates; \
+		[ -f "$(CA_LOCAL_CERT)" ]  && sudo cp "$(CA_LOCAL_CERT)"  /usr/local/share/ca-certificates/ || true; \
+		[ -f "$(CA_DOCKER_CERT)" ] && sudo cp "$(CA_DOCKER_CERT)" /usr/local/share/ca-certificates/ || true; \
+		sudo update-ca-certificates || true; \
 	else \
-		echo "⚠️  Unsupported OS: $$OS"; \
-		echo "Manual install: Import $(CA_DOCKER_CERT) as trusted root CA"; \
+		echo "Windows detected. Use elevated PowerShell:"; \
+		[ -f "$(CA_LOCAL_CERT)" ]  && echo "  certutil -addstore -f Root $$(pwd)\\$(notdir $(CA_LOCAL_CERT))"; \
+		[ -f "$(CA_DOCKER_CERT)" ] && echo "  certutil -addstore -f Root $$(pwd)\\$(notdir $(CA_DOCKER_CERT))"; \
 	fi
-	@echo "✅ CA certificate installed! Restart your browser."
-	@rm -f $(CA_DOCKER_CERT)
+	@echo "✅ Done. Restart your browser."
+	-@rm -f $(CA_DOCKER_CERT) $(CA_LOCAL_CERT)
 
-# Remove CA certificate from system
-untrust-ca: ## Remove Caddy's CA certificate from system (requires sudo)
-	@echo "🗑️  Removing Caddy CA certificate..."
-	@OS=$$(uname); \
-	if [ "$$OS" = "Darwin" ]; then \
-		sudo security delete-certificate -c "Caddy Local Authority" /Library/Keychains/System.keychain 2>/dev/null || true; \
-	elif [ "$$OS" = "Linux" ]; then \
-		sudo rm -f /usr/local/share/ca-certificates/caddy-docker-root.crt; \
-		sudo update-ca-certificates; \
-	fi
-	@echo "✅ CA certificate removed! Restart your browser."
+.PHONY: trust-ca get-ca
 
 ################################################################################
 # BUILD
@@ -216,7 +212,7 @@ clean-go:
 	cd packages/backend && rm -rf bin/ && rm -f coverage.out && rm -f coverage.html && rm -f tmp/main
 
 clean-docker:
-	cd packages/backend && docker-compose down --remove-orphans
+	cd packages/backend && docker compose down --remove-orphans
 
 clean-all: clean clean-go clean-docker
 	rm -rf node_modules
@@ -316,11 +312,11 @@ help:
 	@echo "  deps            Download and tidy Go dependencies"
 	@echo "  deps-update     Update all Go dependencies"
 	@echo ""
-	@echo "Development:"
-	@echo "  dev             Start development environment (both frontend & backend)"
-	@echo "  dev-frontend    Start only frontend"
+	@echo "Development - Local:"
+	@echo "  dev             Start all services with Turbo"
 	@echo "  dev-backend     Start only backend"
-	@echo "  dev-stop        Stop development environment"
+	@echo "  dev-frontend    Start only frontend"
+	@echo "  dev-stop        Stop all development processes"
 	@echo ""
 	@echo "Build:"
 	@echo "  build           Build all packages"

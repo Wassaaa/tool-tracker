@@ -32,7 +32,9 @@
 
             # Container tools
             docker
-            docker-compose
+
+            # Reverse proxy
+            caddy # For local CORS-free development
 
             # Development tools
             git
@@ -45,7 +47,7 @@
             echo "Go version: $(go version)"
             echo "Node version: $(node --version)"
             echo "pnqpm version: $(pnpm --version)"
-            echo "Available commands: go, air, docker, docker-compose, node, pnpm"
+            echo "Available commands: go, air, docker, docker compose, node, pnpm"
 
             # Set up Go environment
             export GOPATH="$PWD/.go"
@@ -74,7 +76,11 @@
             echo "Go tools directory added to PATH"
             echo "NODE_ENV set to: $NODE_ENV"
             echo ""
-            echo "🐳 Containerized development:"
+            echo "� Local development (CORS-free):"
+            echo "  make dev          # Start with Caddy proxy at https://localhost"
+            echo "  make dev-stop     # Stop local development"
+            echo ""
+            echo "�🐳 Containerized development:"
             echo "  make docker-up    # Start with HTTPS at https://tool-tracker.local"
             echo "  make docker-down  # Stop containers"
             echo "  make trust-ca     # Trust HTTPS certificates"

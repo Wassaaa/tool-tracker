@@ -1,0 +1,11 @@
+{
+  "name": "@tool-tracker/caddy",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Caddy reverse proxy for Tool Tracker development",
+  "scripts": {
+    "dev": "caddy run --config Caddyfile.local"
+  },
+  "keywords": ["caddy", "reverse-proxy", "https", "development"],
+  "devDependencies": {}
+}

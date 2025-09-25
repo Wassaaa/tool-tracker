@@ -1,0 +1,6 @@
+# Caddy data and certificates
+caddy-data/
+*.log
+
+# Temporary files
+*.tmp
