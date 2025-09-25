@@ -24,6 +24,8 @@ services:
       context: ./packages/backend
       dockerfile: Dockerfile.dev
       target: backend-dev
+    ports:
+      - "8000:8000"  # Expose for local development
     volumes:
       # Bind mount source for hot reload
       - ./packages/backend:/app

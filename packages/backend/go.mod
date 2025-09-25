@@ -5,6 +5,7 @@ go 1.25.1
 require github.com/modern-go/reflect2 v1.0.2 // indirect; indirects
 
 require (
+	github.com/gin-contrib/cors v1.7.6
 	github.com/gin-gonic/gin v1.11.0
 	github.com/golang/mock v1.6.0
 	github.com/lib/pq v1.10.9
