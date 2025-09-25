@@ -9,12 +9,15 @@
 https://tool-tracker.local {
 	# API routes go to backend
 	handle /api/* {
-		reverse_proxy backend:8080
+		reverse_proxy backend:8000
 	}
+
+	# Swagger documentation - redirect /swagger to /swagger/index.html
+	redir /swagger /swagger/index.html
 
 	# Swagger documentation
 	handle /swagger/* {
-		reverse_proxy backend:8080
+		reverse_proxy backend:8000
 	}
 
 	# Everything else goes to frontend (SPA routing)
@@ -47,12 +50,15 @@ http://tool-tracker.local {
 https://localhost {
 	# API routes go to backend
 	handle /api/* {
-		reverse_proxy backend:8080
+		reverse_proxy backend:8000
 	}
+
+	# Swagger documentation - redirect /swagger to /swagger/index.html
+	redir /swagger /swagger/index.html
 
 	# Swagger documentation
 	handle /swagger/* {
-		reverse_proxy backend:8080
+		reverse_proxy backend:8000
 	}
 
 	# Everything else goes to frontend

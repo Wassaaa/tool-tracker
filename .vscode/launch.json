@@ -1,13 +1,76 @@
 {
   "version": "0.2.0",
-  "configurations": [
+  "compounds": [
     {
-      "name": "Launch",
+      "name": "🚀 Debug Full Stack (Docker)",
+      "configurations": ["Debug Backend (Docker)", "Debug Frontend (Docker)"],
+      "stopAll": true
+    },
+    {
+      "name": "🚀 Debug Full Stack (Local)",
+      "configurations": ["Debug Backend (Local)", "Debug Frontend (Local)"],
+      "stopAll": true
+    },
+    {
+      "name": "🧪 Test Backend",
+      "configurations": ["Test Backend"]
+    }
+  ],
+  "configurations": [
+    // ===== BACKEND GO DEBUGGING =====
+    {
+      "name": "Debug Backend (Local)",
       "type": "go",
       "request": "launch",
       "mode": "auto",
-      "program": "${workspaceFolder}/cmd/api",
-      "env": { "PORT": "8080" }
+      "program": "${workspaceFolder}/packages/backend/cmd/api",
+      "env": {
+        "DATABASE_URL": "postgres://app:app@localhost:5432/tooltracker?sslmode=disable",
+        "GIN_MODE": "debug",
+        "PORT": "8000"
+      },
+      "cwd": "${workspaceFolder}/packages/backend"
+    },
+    {
+      "name": "Test Backend",
+      "type": "go",
+      "request": "launch",
+      "mode": "test",
+      "program": "${workspaceFolder}/packages/backend",
+      "env": {
+        "DATABASE_URL": "postgres://app:app@localhost:5432/tooltracker_test?sslmode=disable"
+      },
+      "args": ["-test.v"]
+    },
+
+    // ===== LOCAL DEVELOPMENT =====
+    {
+      "name": "Debug Frontend (Local)",
+      "type": "chrome",
+      "request": "launch",
+      "url": "https://tool-tracker.local:8443",
+      "webRoot": "${workspaceFolder}/packages/frontend/src",
+      "sourceMaps": true,
+      "runtimeArgs": ["--ignore-certificate-errors"]
+    },
+
+    // ===== DOCKER DEVELOPMENT =====
+    {
+      "name": "Debug Backend (Docker)",
+      "type": "go",
+      "request": "attach",
+      "mode": "remote",
+      "port": 2345,
+      "host": "127.0.0.1"
+    },
+    {
+      "name": "Debug Frontend (Docker)",
+      "type": "chrome",
+      "request": "launch",
+      "url": "https://tool-tracker.local:8443",
+      "webRoot": "${workspaceFolder}/packages/frontend/src",
+      "sourceMaps": true,
+      "runtimeArgs": ["--ignore-certificate-errors"]
     }
   ]
 }

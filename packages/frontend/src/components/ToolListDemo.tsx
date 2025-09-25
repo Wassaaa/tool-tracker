@@ -57,7 +57,7 @@ export const ToolListDemo: React.FC = () => {
     <div className="p-6">
       <h2 className="text-2xl font-bold text-gray-900 mb-6">Tool Inventory</h2>
 
-      {tools.length === 0 ? (
+      {tools.length === 0 || tools[0] == null ? (
         <div className="text-center py-8 text-gray-500">
           No tools found. Try adding some tools first.
         </div>

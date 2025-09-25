@@ -5,21 +5,23 @@
 	storage file_system {
 		root ./caddy-data
 	}
-	# Use custom ports to avoid requiring root
+	http_port 8080
 	https_port 8443
-	http_port 9080
 }
 
 # Main development site
 https://tool-tracker.local:8443, https://localhost:8443 {
 	# API routes go to backend
 	handle /api/* {
-		reverse_proxy localhost:8080
+		reverse_proxy localhost:8000
 	}
+
+	# Swagger documentation - redirect /swagger to /swagger/index.html
+	redir /swagger /swagger/index.html
 
 	# Swagger documentation
 	handle /swagger/* {
-		reverse_proxy localhost:8080
+		reverse_proxy localhost:8000
 	}
 
 	# Everything else goes to frontend (SPA routing)
@@ -42,6 +44,6 @@ https://tool-tracker.local:8443, https://localhost:8443 {
 }
 
 # HTTP redirect to HTTPS
-http://tool-tracker.local:9080, http://localhost:9080 {
+http://tool-tracker.local:8080, http://localhost:8080 {
 	redir https://{host}:8443{uri}
 }

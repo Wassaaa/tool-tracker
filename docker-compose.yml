@@ -33,7 +33,7 @@ services:
     environment:
       - DATABASE_URL=postgres://app:app@db:5432/tooltracker?sslmode=disable
       - GIN_MODE=debug
-      - PORT=8080
+      - PORT=8000
     depends_on:
       db:
         condition: service_healthy
@@ -66,8 +66,8 @@ services:
     container_name: caddy
     image: caddy:2-alpine
     ports:
-      - "443:443"
-      - "80:80"
+      - "8443:443"
+      - "8080:80"
     volumes:
       - ./packages/caddy/Caddyfile:/etc/caddy/Caddyfile
       - caddy_data:/data
