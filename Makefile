@@ -45,13 +45,13 @@ docker-up: ## Start containerized development environment with HTTPS
 	@echo ""
 	@echo "✅ Services started!"
 	@if grep -q "tool-tracker.local" /etc/hosts; then \
-		echo "🌐 Main App: https://tool-tracker.local"; \
-		echo "🔧 Backend API: https://tool-tracker.local/api"; \
-		echo "📚 API Docs: https://tool-tracker.local/swagger/"; \
+		echo "🌐 Main App: https://tool-tracker.local:8443"; \
+		echo "🔧 Backend API: https://tool-tracker.local:8443/api"; \
+		echo "📚 API Docs: https://tool-tracker.local:8443/swagger/"; \
 	else \
-		echo "🌐 Main App: https://localhost"; \
-		echo "🔧 Backend API: https://localhost/api"; \
-		echo "📚 API Docs: https://localhost/swagger/"; \
+		echo "🌐 Main App: https://localhost:8443"; \
+		echo "🔧 Backend API: https://localhost:8443/api"; \
+		echo "📚 API Docs: https://localhost:8443/swagger/"; \
 	fi
 	@echo "🗄️  Database Admin: http://localhost:9000"
 	@echo ""
@@ -130,7 +130,7 @@ docker-help: ## Show containerized development commands
 	@echo "  make docker-restart SERVICE=frontend         # Restart frontend"
 	@echo "  make docker-exec SERVICE=frontend CMD='pnpm lint'  # Run command"
 	@echo ""
-	@echo "🌐 After 'make docker-up', visit: https://tool-tracker.local"
+	@echo "🌐 After 'make docker-up', visit: https://tool-tracker.local:8443 or https://localhost:8443"
 
 ################################################################################
 # DEV CERTS - CA Certificate Management

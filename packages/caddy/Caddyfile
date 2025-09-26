@@ -12,8 +12,9 @@ https://tool-tracker.local {
 		reverse_proxy backend:8000
 	}
 
-	# Swagger documentation - redirect /swagger to /swagger/index.html
+	# Swagger documentation - redirect /swagger and /swagger/ to /swagger/index.html
 	redir /swagger /swagger/index.html
+	redir /swagger/ /swagger/index.html
 
 	# Swagger documentation
 	handle /swagger/* {
@@ -53,8 +54,9 @@ https://localhost {
 		reverse_proxy backend:8000
 	}
 
-	# Swagger documentation - redirect /swagger to /swagger/index.html
+	# Swagger documentation - redirect /swagger and /swagger/ to /swagger/index.html
 	redir /swagger /swagger/index.html
+	redir /swagger/ /swagger/index.html
 
 	# Swagger documentation
 	handle /swagger/* {
